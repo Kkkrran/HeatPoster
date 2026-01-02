@@ -14,8 +14,17 @@ Component({
   },
 
   methods: {
-    toast(message: string) {
-      wx.showToast({ title: message, icon: 'none' })
+    toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
+      // 使用 TDesign Toast 组件（<t-toast id="t-toast" />）展示提示
+      // 组件 API: https://tdesign.tencent.com/miniprogram/components/toast
+      const toast = this.selectComponent('#t-toast') as any
+      if (!toast || typeof toast.show !== 'function') return
+      toast.show({
+        theme,
+        direction: 'column',
+        message,
+        duration: 1800,
+      })
     },
 
     openTools() {
@@ -57,7 +66,7 @@ Component({
     },
 
     onSave() {
-      wx.showToast({ title: '保存成功（占位）', icon: 'success' })
+      this.toast('保存成功（占位）', 'success')
     },
   },
 })
