@@ -23,12 +23,14 @@ exports.main = async (event, context) => {
     switch (action) {
       case 'list': {
         const limit = Math.min(Math.max(Number(event.limit || 50), 1), 100)
+        console.log('list action, OPENID:', OPENID)
         const res = await db
           .collection(COLLECTION)
           .where({ _openid: OPENID, isDeleted: _.neq(true) })
           .orderBy('updatedAt', 'desc')
           .limit(limit)
           .get()
+        console.log('list result count:', res.data.length)
         return { ok: true, data: res.data }
       }
 
