@@ -290,7 +290,11 @@ Component({
 
     onToolsVisibleChange(e: any) {
       const { visible } = e.detail || {}
-      this.setData({ toolsVisible: !!visible })
+      this.setData({ 
+        toolsVisible: !!visible,
+        // 当弹窗关闭（点击遮罩层）时，也要恢复 Canvas 显示
+        isCanvasHidden: !!visible 
+      })
     },
 
     onBrushRadiusChange(e: any) {
