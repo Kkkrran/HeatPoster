@@ -217,8 +217,9 @@ page {
 }
 
 .slider-vertical-box {
-  height: 300rpx;
+  height: 420rpx;
   display: flex;
   justify-content: center;
   padding-bottom: 10rpx;
+  --td-slider-dot-size: 81rpx;
 }
