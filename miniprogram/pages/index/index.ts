@@ -1,10 +1,26 @@
 type Artwork = {
+  /** 云数据库 _id */
   id: string
   name: string
   updatedAt: number
   updatedAtText: string
+  /** 云存储 fileID，用于列表头像预览 */
   thumbnail: string
+  /** 云存储 fileID：原图/导出图（可选） */
+  exportFileId?: string
 }
+
+type ArtworkDoc = {
+  _id: string
+  name: string
+  updatedAt: number
+  thumbnailFileId?: string
+  exportFileId?: string
+  isDeleted?: boolean
+}
+
+const ENV_ID = 'cloud1-8gonkf4q94e7505c'
+const FUNCTION_ARTWORKS = 'artworks'
 
 const formatDate = (ts: number) => {
   const d = new Date(ts)
@@ -14,44 +30,76 @@ const formatDate = (ts: number) => {
   return `${y}/${m}/${day}`
 }
 
+const ensureCloud = () => {
+  if (!wx.cloud) return
+  // 避免重复 init 报错
+  try {
+    wx.cloud.init({ env: ENV_ID })
+  } catch (e) {
+    // ignore
+  }
+}
+
+const toArtwork = (doc: ArtworkDoc): Artwork => {
+  const updatedAt = Number(doc.updatedAt ?? 0)
+  return {
+    id: doc._id,
+    name: doc.name || '未命名作品',
+    updatedAt,
+    updatedAtText: updatedAt ? formatDate(updatedAt) : '',
+    thumbnail: doc.thumbnailFileId || '',
+    exportFileId: doc.exportFileId,
+  }
+}
+
 Component({
   data: {
     artworks: [] as Artwork[],
+    loading: false,
     moreVisible: false,
     currentArtworkId: '' as string,
     moreItems: [
-      { label: '重命名（占位）', value: 'rename' },
-      { label: '删除（占位）', value: 'delete', theme: 'danger' },
-      { label: '导出到相册（占位）', value: 'export' },
+      { label: '重命名', value: 'rename' },
+      { label: '删除', value: 'delete', theme: 'danger' },
+      { label: '导出到相册', value: 'export' },
     ],
   },
 
   lifetimes: {
     attached() {
-      // 原型阶段：用 mock 数据占位
-      const now = Date.now()
-      const artworks: Artwork[] = [
-        {
-          id: 'a1',
-          name: '未命名作品',
-          updatedAt: now,
-          updatedAtText: formatDate(now),
-          // 这里用空字符串也可，avatar 会显示默认占位
-          thumbnail: '',
-        },
-        {
-          id: 'a2',
-          name: '热力练习',
-          updatedAt: now - 24 * 3600 * 1000,
-          updatedAtText: formatDate(now - 24 * 3600 * 1000),
-          thumbnail: '',
-        },
-      ]
-      this.setData({ artworks })
+      ensureCloud()
+      this.refresh()
     },
   },
 
   methods: {
+    async refresh() {
+      if (!wx.cloud) {
+        wx.showToast({ title: '未检测到云开发能力', icon: 'none' })
+        return
+      }
+
+      this.setData({ loading: true })
+      try {
+        const res = await wx.cloud.callFunction({
+          name: FUNCTION_ARTWORKS,
+          data: { action: 'list', limit: 50 },
+        })
+
+        const result = (res.result || {}) as any
+        if (!result.ok) throw new Error(result.error || 'callFunction failed')
+
+        const docs = (result.data || []) as unknown as ArtworkDoc[]
+        const artworks = docs.map(toArtwork)
+        this.setData({ artworks })
+      } catch (err) {
+        console.error('load artworks failed', err)
+        wx.showToast({ title: '加载作品失败', icon: 'none' })
+      } finally {
+        this.setData({ loading: false })
+      }
+    },
+
     onCreate() {
       wx.navigateTo({ url: '/pages/editor/editor?mode=create' })
     },
@@ -74,10 +122,122 @@ Component({
       const { value } = e.detail || {}
       const id = this.data.currentArtworkId
       this.setData({ moreVisible: false })
-      wx.showToast({
-        title: `${value}：${id}`,
-        icon: 'none',
+      if (!id) return
+
+      switch (value) {
+        case 'rename':
+          this.renameArtwork(id)
+          break
+        case 'delete':
+          this.deleteArtwork(id)
+          break
+        case 'export':
+          this.exportArtworkToAlbum(id)
+          break
+        default:
+          wx.showToast({ title: String(value || ''), icon: 'none' })
+      }
+    },
+
+    async renameArtwork(id: string) {
+      const current = this.data.artworks.find(a => a.id === id)
+      const defaultValue = current?.name || ''
+
+      wx.showModal({
+        title: '重命名作品',
+        editable: true,
+        placeholderText: '请输入作品名',
+        confirmText: '保存',
+        ...(defaultValue ? { defaultText: defaultValue } : {}),
+        success: async r => {
+          if (!r.confirm) return
+          const name = String((r as any).content || '').trim()
+          if (!name) {
+            wx.showToast({ title: '名称不能为空', icon: 'none' })
+            return
+          }
+          try {
+            const cf = await wx.cloud.callFunction({
+              name: FUNCTION_ARTWORKS,
+              data: { action: 'rename', id, name },
+            })
+            const result = (cf.result || {}) as any
+            if (!result.ok) throw new Error(result.error || 'rename failed')
+            wx.showToast({ title: '已重命名', icon: 'success' })
+            this.refresh()
+          } catch (err) {
+            console.error('rename failed', err)
+            wx.showToast({ title: '重命名失败', icon: 'none' })
+          }
+        },
       })
+    },
+
+    async deleteArtwork(id: string) {
+      wx.showModal({
+        title: '确认删除？',
+        content: '删除后将从作品库移除（可在后台恢复数据）。',
+        confirmText: '删除',
+        confirmColor: '#e34d59',
+        success: async r => {
+          if (!r.confirm) return
+          try {
+            const cf = await wx.cloud.callFunction({
+              name: FUNCTION_ARTWORKS,
+              data: { action: 'delete', id },
+            })
+            const result = (cf.result || {}) as any
+            if (!result.ok) throw new Error(result.error || 'delete failed')
+
+            wx.showToast({ title: '已删除', icon: 'success' })
+            this.refresh()
+          } catch (err) {
+            console.error('delete failed', err)
+            wx.showToast({ title: '删除失败', icon: 'none' })
+          }
+        },
+      })
+    },
+
+    async exportArtworkToAlbum(id: string) {
+      const item = this.data.artworks.find(a => a.id === id)
+      const fileID = item?.exportFileId || item?.thumbnail
+      if (!fileID) {
+        wx.showToast({ title: '暂无可导出的图片', icon: 'none' })
+        return
+      }
+
+      try {
+        wx.showLoading({ title: '导出中…' })
+        const r = await wx.cloud.downloadFile({ fileID })
+        const tempFilePath = r.tempFilePath
+        await new Promise<void>((resolve, reject) => {
+          wx.saveImageToPhotosAlbum({
+            filePath: tempFilePath,
+            success: () => resolve(),
+            fail: err => reject(err),
+          })
+        })
+        wx.showToast({ title: '已保存到相册', icon: 'success' })
+      } catch (err: any) {
+        console.error('export failed', err)
+        // 未授权时给出引导
+        const msg = String(err?.errMsg || '')
+        if (msg.includes('auth') || msg.includes('authorize') || msg.includes('deny')) {
+          wx.showModal({
+            title: '需要相册权限',
+            content: '请在「设置」中开启保存到相册权限。',
+            confirmText: '去设置',
+            success: r => {
+              if (r.confirm) wx.openSetting({})
+            },
+          })
+        } else {
+          wx.showToast({ title: '导出失败', icon: 'none' })
+        }
+      } finally {
+        wx.hideLoading()
+      }
     },
 
     onGoSettings() {
