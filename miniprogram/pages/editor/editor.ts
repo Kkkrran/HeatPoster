@@ -21,11 +21,13 @@ Component({
 
   data: {
     toolsVisible: false,
-    brushRadius: 18,
-    heatRate: 1.0,
+    brushRadius: 40,
+    heatRate: 3.0,
     canRedo: false,
     canUndo: false,
     openid: '',
+    snapshotUrl: '',
+    isCanvasHidden: false,
   },
 
   lifetimes: {
@@ -258,11 +260,32 @@ Component({
     },
 
     openTools() {
-      this.setData({ toolsVisible: true })
+      const self = this as any
+      // 生成快照以解决原生 Canvas 遮挡 Popup 的问题
+      wx.canvasToTempFilePath({
+        canvas: self.canvas,
+        fileType: 'png',
+        quality: 0.8,
+        success: (res) => {
+          this.setData({
+            snapshotUrl: res.tempFilePath,
+            isCanvasHidden: true,
+            toolsVisible: true
+          })
+        },
+        fail: (err) => {
+          console.error('snapshot failed', err)
+          // 降级处理：直接打开，虽然可能会遮挡
+          this.setData({ toolsVisible: true })
+        }
+      })
     },
 
     closeTools() {
-      this.setData({ toolsVisible: false })
+      this.setData({ 
+        toolsVisible: false,
+        isCanvasHidden: false
+      })
     },
 
     onToolsVisibleChange(e: any) {

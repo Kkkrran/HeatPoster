@@ -23,7 +23,64 @@ page {
   border: 1px solid #e7e9ee;
   /* 确保画布层级低于工具面板 */
   position: relative;
-  z-index: 1;
+}
+
+.canvas-snapshot {
+  width: 100%;
+  height: 100%;
+  border-radius: 24rpx;
+  background: #ffffff;
+  border: 1px solid #e7e9ee;
+  display: block;
+}
+
+.top-bar {
+  position: absolute;
+  top: 40rpx;
+  left: 40rpx;
+  right: 40rpx;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none; /* 让空白区域不阻挡下方 Canvas 点击 */
+  z-index: 100;
+}
+
+.top-left, .top-right {
+  display: flex;
+  gap: 20rpx;
+  pointer-events: auto; /* 恢复按钮点击 */
+}
+
+.circle-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e7e9ee;
+  border-radius: 32rpx;
+  padding: 12rpx 24rpx;
+  font-size: 28rpx;
+  color: #1f2329;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+}
+
+.circle-btn.disabled {
+  opacity: 0.5;
+  color: #999;
+}
+
+.rect-btn {
+  background: #ffffff;
+  border-radius: 8rpx;
+  padding: 12rpx 32rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+}
+
+.rect-btn.primary {
+  background: #0052d9;
+  color: #ffffff;
 }
 
 .tool-fab {
