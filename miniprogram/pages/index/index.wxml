@@ -27,7 +27,7 @@
     </block>
 
     <t-cell-group wx:else>
-      <t-cell wx:for="{{artworks}}" wx:key="id" title="{{item.name}}" description="更新：{{item.updatedAtText}}" arrow bind:tap="onOpen" data-id="{{item.id}}">
+      <t-cell wx:for="{{artworks}}" wx:key="id" title="{{item.name}}" description="更新：{{item.updatedAtText}}" bind:tap="onOpen" data-id="{{item.id}}">
         <view slot="leftIcon">
           <t-avatar size="medium" shape="round" image="{{item.thumbnail}}" />
         </view>

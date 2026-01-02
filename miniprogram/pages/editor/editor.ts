@@ -22,7 +22,7 @@ Component({
   data: {
     toolsVisible: false,
     brushRadius: 40,
-    heatRate: 3.0,
+    heatRate: 0.6,
     canRedo: false,
     canUndo: false,
     openid: '',
