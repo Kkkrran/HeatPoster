@@ -44,11 +44,7 @@
           <view class="sheet-title">工具与设置</view>
           <view class="sheet-subtitle">缩小占用，画布更大</view>
         </view>
-        <t-button variant="outline" size="small" theme="default" bindtap="closeTools">关闭</t-button>
-      </view>
-
-      <view class="tool-row">
-        <t-button variant="outline" size="small" theme="default" bindtap="onClear">清空画布</t-button>
+        <t-button theme="danger" variant="base" size="small" bindtap="onClear">清空画布</t-button>
       </view>
 
       <view class="slider-row">
@@ -73,10 +69,6 @@
         </view>
       </view>
 
-      <view class="panel panel-tip">
-        <view class="panel-title">提示（原型）</view>
-        <view class="panel-hint">按“笔画结束”入栈；撤回后新绘制会清空重做栈。</view>
-      </view>
     </view>
   </t-popup>
 

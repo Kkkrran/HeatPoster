@@ -167,7 +167,7 @@ page {
 .slider-card {
   flex: 1;
   background: #ffffff;
-  border: 1px solid #e7e9ee;
+  /* border: 1px solid #e7e9ee; */
   border-radius: 24rpx;
   padding: 24rpx;
   display: flex;
