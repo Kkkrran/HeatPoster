@@ -2,7 +2,15 @@
 <view class="page">
   <view class="canvas-wrap">
     <!-- 原型阶段：先用 canvas 占位；真实绘制逻辑后续补齐 -->
-    <canvas type="2d" id="paintCanvas" class="canvas"></canvas>
+    <canvas 
+      type="2d" 
+      id="paintCanvas" 
+      class="canvas"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+      bindtouchcancel="onTouchEnd"
+    ></canvas>
 
     <!-- 左下角工具按钮（模拟 prototype 的三角尖） -->
     <view class="tool-fab" bindtap="openTools" aria-label="打开工具面板">

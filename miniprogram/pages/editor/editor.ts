@@ -1,22 +1,69 @@
+// miniprogram/pages/editor/editor.ts
+
+// 定义笔触点结构
+interface HeatPoint {
+  x: number
+  y: number
+  r: number
+  opacity: number
+}
+
+// 定义笔画结构
+type Stroke = HeatPoint[]
+
 Component({
+  properties: {
+    artworkId: {
+      type: String,
+      value: ''
+    }
+  },
+
   data: {
     toolsVisible: false,
     brushRadius: 18,
     heatRate: 1.0,
     canRedo: false,
+    canUndo: false,
   },
 
   lifetimes: {
     attached() {
-      // 原型阶段先不接入真实热力绘制逻辑；这里仅做页面与交互骨架
-      // 后续可以在这里初始化 canvas 2d context、heatmap 数据结构、undo/redo 栈等
+      // 初始化实例变量
+      Object.assign(this, {
+        canvas: null,
+        ctx: null,
+        memCanvas: null,
+        memCtx: null,
+        palette: null,
+        dpr: 1,
+        width: 0,
+        height: 0,
+        strokes: [],
+        redoStack: [],
+        currentStroke: [],
+        needsRender: false,
+        renderLoopId: 0
+      })
+      this.initCanvas()
+    },
+    detached() {
+      const self = this as any
+      if (self.renderLoopId) {
+        self.canvas.cancelAnimationFrame(self.renderLoopId)
+      }
     },
   },
 
   methods: {
+    onLoad(options: any) {
+      if (options && options.id) {
+        this.setData({ artworkId: options.id })
+        this.loadArtwork(options.id)
+      }
+    },
+
     toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
-      // 使用 TDesign Toast 组件（<t-toast id="t-toast" />）展示提示
-      // 组件 API: https://tdesign.tencent.com/miniprogram/components/toast
       const toast = this.selectComponent('#t-toast') as any
       if (!toast || typeof toast.show !== 'function') return
       toast.show({
@@ -25,6 +72,169 @@ Component({
         message,
         duration: 1800,
       })
+    },
+
+    initCanvas() {
+      const query = this.createSelectorQuery()
+      query.select('#paintCanvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          if (!res[0] || !res[0].node) return
+          const canvas = res[0].node
+          const ctx = canvas.getContext('2d')
+          // @ts-ignore
+          const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
+          
+          const self = this as any
+          self.canvas = canvas
+          self.ctx = ctx
+          self.dpr = dpr
+          self.width = res[0].width
+          self.height = res[0].height
+
+          canvas.width = res[0].width * dpr
+          canvas.height = res[0].height * dpr
+          ctx.scale(dpr, dpr)
+
+          // 初始化离屏 Canvas
+          // @ts-ignore
+          self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
+          self.memCtx = self.memCanvas.getContext('2d')
+
+          this.initPalette()
+          this.startRenderLoop()
+        })
+    },
+
+    initPalette() {
+      // @ts-ignore
+      const pCanvas = wx.createOffscreenCanvas({ type: '2d', width: 256, height: 1 })
+      const pCtx = pCanvas.getContext('2d')
+      
+      const grad = pCtx.createLinearGradient(0, 0, 256, 0)
+      grad.addColorStop(0.0, "rgba(0,0,0,0)")
+      grad.addColorStop(0.2, "rgba(0,0,255,0.2)")
+      grad.addColorStop(0.3, "rgba(43,111,231,0.3)")
+      grad.addColorStop(0.4, "rgba(2,192,241,0.4)")
+      grad.addColorStop(0.6, "rgba(44,222,148,0.6)")
+      grad.addColorStop(0.8, "rgba(254,237,83,0.8)")
+      grad.addColorStop(0.9, "rgba(255,118,50,0.9)")
+      grad.addColorStop(1.0, "rgba(255,10,0,0.95)")
+      
+      pCtx.fillStyle = grad
+      pCtx.fillRect(0, 0, 256, 1)
+      
+      const imageData = pCtx.getImageData(0, 0, 256, 1)
+      const self = this as any
+      self.palette = imageData.data
+    },
+
+    startRenderLoop() {
+      const self = this as any
+      const loop = () => {
+        if (self.needsRender) {
+          this.render()
+          self.needsRender = false
+        }
+        self.renderLoopId = self.canvas.requestAnimationFrame(loop)
+      }
+      self.renderLoopId = self.canvas.requestAnimationFrame(loop)
+    },
+
+    onTouchStart(e: any) {
+      const { x, y } = e.touches[0]
+      const self = this as any
+      self.currentStroke = []
+      this.addPoint(x, y)
+    },
+
+    onTouchMove(e: any) {
+      const { x, y } = e.touches[0]
+      this.addPoint(x, y)
+    },
+
+    onTouchEnd(_e: any) {
+      const self = this as any
+      if (self.currentStroke.length > 0) {
+        self.strokes.push(self.currentStroke)
+        self.redoStack = []
+        this.setData({ 
+          canUndo: true,
+          canRedo: false
+        })
+        self.currentStroke = []
+      }
+    },
+
+    addPoint(x: number, y: number) {
+      const self = this as any
+      if (!self.memCtx) return
+      const point: HeatPoint = {
+        x,
+        y,
+        r: this.data.brushRadius,
+        opacity: 0.05 * this.data.heatRate
+      }
+      self.currentStroke.push(point)
+      this.drawAlphaPoint(point)
+      self.needsRender = true
+    },
+
+    drawAlphaPoint(p: HeatPoint) {
+      const self = this as any
+      const ctx = self.memCtx
+      const dpr = self.dpr
+      const cx = p.x * dpr
+      const cy = p.y * dpr
+      const r = p.r * dpr
+      
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+      grad.addColorStop(0, `rgba(0,0,0,${p.opacity})`)
+      grad.addColorStop(1, "rgba(0,0,0,0)")
+      
+      ctx.fillStyle = grad
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+      ctx.fill()
+    },
+
+    render() {
+      const self = this as any
+      if (!self.palette || !self.memCtx || !self.ctx) return
+      
+      const w = self.memCanvas.width
+      const h = self.memCanvas.height
+      
+      const imageData = self.memCtx.getImageData(0, 0, w, h)
+      const data = imageData.data
+      const palette = self.palette
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3]
+        if (alpha > 0) {
+          const offset = alpha * 4
+          data[i] = palette[offset]
+          data[i + 1] = palette[offset + 1]
+          data[i + 2] = palette[offset + 2]
+          data[i + 3] = palette[offset + 3]
+        }
+      }
+      
+      self.ctx.putImageData(imageData, 0, 0)
+    },
+
+    redrawAll() {
+      const self = this as any
+      if (!self.memCtx) return
+      self.memCtx.clearRect(0, 0, self.memCanvas.width, self.memCanvas.height)
+      
+      for (const stroke of self.strokes) {
+        for (const p of stroke) {
+          this.drawAlphaPoint(p)
+        }
+      }
+      
+      self.needsRender = true
     },
 
     openTools() {
@@ -36,7 +246,6 @@ Component({
     },
 
     onToolsVisibleChange(e: any) {
-      // t-popup 会回传 visible
       const { visible } = e.detail || {}
       this.setData({ toolsVisible: !!visible })
     },
@@ -52,21 +261,137 @@ Component({
     },
 
     onUndo() {
-      this.toast('撤回（占位）')
-      this.setData({ canRedo: true })
+      const self = this as any
+      if (self.strokes.length === 0) return
+      const stroke = self.strokes.pop()
+      if (stroke) {
+        self.redoStack.push(stroke)
+        this.setData({ 
+          canUndo: self.strokes.length > 0,
+          canRedo: true 
+        })
+        this.redrawAll()
+        this.toast('已撤回')
+      }
     },
 
     onRedo() {
-      this.toast('重做（占位）')
-      this.setData({ canRedo: false })
+      const self = this as any
+      if (self.redoStack.length === 0) return
+      const stroke = self.redoStack.pop()
+      if (stroke) {
+        self.strokes.push(stroke)
+        this.setData({ 
+          canUndo: true,
+          canRedo: self.redoStack.length > 0 
+        })
+        for (const p of stroke) {
+          this.drawAlphaPoint(p)
+        }
+        self.needsRender = true
+        this.toast('已重做')
+      }
     },
 
     onClear() {
-      this.toast('清空（占位，需二次确认）')
+      const self = this as any
+      self.strokes = []
+      self.redoStack = []
+      this.setData({ canUndo: false, canRedo: false })
+      this.redrawAll()
+      this.toast('画布已清空')
     },
 
-    onSave() {
-      this.toast('保存成功（占位）', 'success')
+    async onSave() {
+      const self = this as any
+      if (self.strokes.length === 0) {
+        this.toast('画布为空', 'warning')
+        return
+      }
+      
+      this.toast('正在保存...', 'loading')
+      
+      try {
+        const strokesData = JSON.stringify(self.strokes)
+        const fs = wx.getFileSystemManager()
+        const pointsPath = `${wx.env.USER_DATA_PATH}/${Date.now()}_points.json`
+        fs.writeFileSync(pointsPath, strokesData, 'utf8')
+
+        const { fileID: pointsFileId } = await wx.cloud.uploadFile({
+          cloudPath: `artworks/${Date.now()}_points.json`,
+          filePath: pointsPath
+        })
+        
+        const { tempFilePath } = await wx.canvasToTempFilePath({
+          canvas: self.canvas,
+          fileType: 'png',
+          quality: 0.8
+        })
+        
+        const { fileID: thumbnailFileId } = await wx.cloud.uploadFile({
+          cloudPath: `artworks/${Date.now()}_thumb.png`,
+          filePath: tempFilePath
+        })
+        
+        let id = this.data.artworkId
+        if (!id) {
+           const res = await wx.cloud.callFunction({
+             name: 'editor',
+             data: { 
+               action: 'create',
+               name: '未命名作品',
+               width: self.width,
+               height: self.height
+             }
+           })
+           // @ts-ignore
+           id = res.result.data.id
+           this.setData({ artworkId: id })
+        }
+        
+        await wx.cloud.callFunction({
+          name: 'editor',
+          data: {
+            action: 'savePoints',
+            id,
+            pointsFileId,
+            thumbnailFileId
+          }
+        })
+        
+        this.toast('保存成功', 'success')
+        
+      } catch (err) {
+        console.error(err)
+        this.toast('保存失败', 'error')
+      }
     },
+    
+    async loadArtwork(id: string) {
+      const self = this as any
+      this.toast('加载中...', 'loading')
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'editor',
+          data: { action: 'get', id }
+        })
+        // @ts-ignore
+        const data = res.result.data
+        if (data && data.pointsFileId) {
+          const downloadRes = await wx.cloud.downloadFile({ fileID: data.pointsFileId })
+          const fs = wx.getFileSystemManager()
+          const jsonStr = fs.readFileSync(downloadRes.tempFilePath, 'utf8')
+          const strokes = JSON.parse(jsonStr as string)
+          
+          self.strokes = strokes
+          this.redrawAll()
+          this.setData({ canUndo: true })
+        }
+        this.toast('加载完成', 'success')
+      } catch (err) {
+        console.error(err)
+        this.toast('加载失败', 'error')
+      }
+    }
   },
 })
