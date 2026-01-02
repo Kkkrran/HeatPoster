@@ -29,7 +29,8 @@
           <t-avatar size="medium" shape="round" image="{{item.thumbnail}}" />
         </view>
         <view slot="note" class="cell-note">
-          <t-button size="small" variant="outline" theme="default" bind:tap.stop="onMore" data-id="{{item.id}}">⋯</t-button>
+          <!-- WXML 不支持 bind:tap.stop；用 catchtap 阻止事件冒泡 -->
+          <t-button size="small" variant="outline" theme="default" catchtap="onMore" data-id="{{item.id}}">⋯</t-button>
         </view>
       </t-cell>
     </t-cell-group>

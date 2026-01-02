@@ -1,5 +1,5 @@
 /**app.wxss**/
-@import "tdesign-miniprogram/common/index.wxss";
+@import "/miniprogram_npm/tdesign-miniprogram/common/index.wxss";
 
 .container {
   height: 100%;
