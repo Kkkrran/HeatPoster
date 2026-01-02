@@ -29,7 +29,7 @@
     "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,
-    "packNpmManually": true,
+    "packNpmManually": false,
     "minifyWXSS": true,
     "minifyWXML": true,
     "localPlugins": false,
