@@ -1,6 +1,8 @@
 type Artwork = {
   /** 云数据库 _id */
   id: string
+  /** 用户 openid */
+  _openid: string
   name: string
   updatedAt: number
   updatedAtText: string
@@ -12,6 +14,7 @@ type Artwork = {
 
 type ArtworkDoc = {
   _id: string
+  _openid: string
   name: string
   updatedAt: number
   thumbnailFileId?: string
@@ -44,6 +47,7 @@ const toArtwork = (doc: ArtworkDoc): Artwork => {
   const updatedAt = Number(doc.updatedAt ?? 0)
   return {
     id: doc._id,
+    _openid: doc._openid,
     name: doc.name || '未命名作品',
     updatedAt,
     updatedAtText: updatedAt ? formatDate(updatedAt) : '',

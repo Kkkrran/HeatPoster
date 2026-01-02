@@ -19,6 +19,10 @@ exports.main = async (event, context) => {
 
   try {
     switch (action) {
+      case 'getOpenId': {
+        return { ok: true, data: { openid: OPENID } }
+      }
+
       case 'create': {
         const now = Date.now()
         const name = pickString(event.name).trim() || '未命名作品'
@@ -26,6 +30,7 @@ exports.main = async (event, context) => {
         const height = Number(event.height || 0)
         const res = await db.collection(COLLECTION).add({
           data: {
+            _openid: OPENID, // 明确写入 openid，确保用户能查询到自己的作品
             name,
             createdAt: now,
             updatedAt: now,

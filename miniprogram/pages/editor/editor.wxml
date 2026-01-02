@@ -39,13 +39,13 @@
 
       <view class="panel">
         <view class="panel-title">画笔半径 <text class="panel-value">{{brushRadius}}</text></view>
-        <t-slider value="{{brushRadius}}" min="6" max="60" step="1" bindchange="onBrushRadiusChange" />
+        <t-slider value="{{brushRadius}}" min="6" max="60" step="1" bind:change="onBrushRadiusChange" />
         <view class="panel-hint">范围：6 ~ 60</view>
       </view>
 
       <view class="panel">
         <view class="panel-title">增热速率 <text class="panel-value">{{heatRate}}</text></view>
-        <t-slider value="{{heatRate}}" min="0.2" max="3" step="0.1" bindchange="onHeatRateChange" />
+        <t-slider value="{{heatRate}}" min="0.2" max="3" step="0.1" bind:change="onHeatRateChange" />
         <view class="panel-hint">范围：0.2 ~ 3.0</view>
       </view>
 

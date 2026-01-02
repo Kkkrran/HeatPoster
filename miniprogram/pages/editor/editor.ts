@@ -25,6 +25,7 @@ Component({
     heatRate: 1.0,
     canRedo: false,
     canUndo: false,
+    openid: '',
   },
 
   lifetimes: {
@@ -46,6 +47,7 @@ Component({
         renderLoopId: 0
       })
       this.initCanvas()
+      this.getOpenId()
     },
     detached() {
       const self = this as any
@@ -60,6 +62,24 @@ Component({
       if (options && options.id) {
         this.setData({ artworkId: options.id })
         this.loadArtwork(options.id)
+      }
+    },
+
+    async getOpenId() {
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'editor',
+          data: { action: 'getOpenId' }
+        })
+        const result = res.result as any
+        if (!result.ok) {
+          console.error('getOpenId cloud error:', result)
+          return
+        }
+        const openid = result.data.openid
+        this.setData({ openid })
+      } catch (e) {
+        console.error('getOpenId failed', e)
       }
     },
 
@@ -251,11 +271,13 @@ Component({
     },
 
     onBrushRadiusChange(e: any) {
+      console.log('onBrushRadiusChange', e)
       const v = Number(e.detail?.value ?? 18)
       this.setData({ brushRadius: v })
     },
 
     onHeatRateChange(e: any) {
+      console.log('onHeatRateChange', e)
       const v = Number(e.detail?.value ?? 1.0)
       this.setData({ heatRate: v })
     },
@@ -317,8 +339,9 @@ Component({
         const pointsPath = `${wx.env.USER_DATA_PATH}/${Date.now()}_points.json`
         fs.writeFileSync(pointsPath, strokesData, 'utf8')
 
+        const openid = this.data.openid || 'unknown'
         const { fileID: pointsFileId } = await wx.cloud.uploadFile({
-          cloudPath: `artworks/${Date.now()}_points.json`,
+          cloudPath: `artworks/${openid}/${Date.now()}_points.json`,
           filePath: pointsPath
         })
         
@@ -329,7 +352,7 @@ Component({
         })
         
         const { fileID: thumbnailFileId } = await wx.cloud.uploadFile({
-          cloudPath: `artworks/${Date.now()}_thumb.png`,
+          cloudPath: `artworks/${openid}/${Date.now()}_thumb.png`,
           filePath: tempFilePath
         })
         
