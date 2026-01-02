@@ -3,7 +3,7 @@
     <movable-area class="cropper-area" scale-area>
       <movable-view
         class="cropper-view"
-        direction="all"
+        direction="none"
         scale
         scale-min="0.5"
         scale-max="5"
@@ -22,16 +22,20 @@
       </movable-view>
     </movable-area>
 
-    <!-- 遮罩层，中间镂空显示裁剪区域 -->
-    <view class="mask" pointer-events="none">
-      <view class="mask-top"></view>
-      <view class="mask-middle">
-        <view class="mask-left"></view>
-        <view class="crop-box" style="width: {{cropWidth}}px; height: {{cropHeight}}px;"></view>
-        <view class="mask-right"></view>
-      </view>
-      <view class="mask-bottom"></view>
-    </view>
+    <!-- 取景框层，覆盖在图片之上 -->
+    <movable-area class="crop-box-area" pointer-events="none">
+      <movable-view
+        class="crop-box-view"
+        direction="all"
+        x="{{cropX}}"
+        y="{{cropY}}"
+        bindchange="onCropChange"
+        style="width: {{cropWidth}}px; height: {{cropHeight}}px;"
+        pointer-events="auto"
+      >
+        <view class="crop-box-inner"></view>
+      </movable-view>
+    </movable-area>
   </view>
 
   <view class="footer">

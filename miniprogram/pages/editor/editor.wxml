@@ -58,7 +58,7 @@
       </view>
 
       <view class="tool-row" style="padding: 0 32rpx; margin-top: 20rpx;">
-        <t-button theme="primary" variant="outline" block bindtap="onImportBackground">导入背景图</t-button>
+        <t-button theme="primary" variant="outline" block bindtap="onImportBackground">导入临时背景图</t-button>
       </view>
 
       <view class="slider-row">

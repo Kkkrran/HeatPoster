@@ -22,6 +22,10 @@ Page({
     // 屏幕/容器信息
     containerWidth: 0,
     containerHeight: 0,
+
+    // 取景框位置
+    cropX: 0,
+    cropY: 0,
   },
 
   onLoad(_options: any) {
@@ -64,6 +68,10 @@ Page({
         const x = (containerWidth - imgWidth) / 2
         const y = (containerHeight - imgHeight) / 2
 
+        // 取景框初始居中
+        const cropX = (containerWidth - this.data.cropWidth) / 2
+        const cropY = (containerHeight - this.data.cropHeight) / 2
+
         this.setData({
           width,
           height,
@@ -72,7 +80,9 @@ Page({
           x,
           y,
           scale: 1,
-          rotate: 0
+          rotate: 0,
+          cropX,
+          cropY
         })
       }
     })
@@ -86,6 +96,11 @@ Page({
   onScale(e: any) {
     const { scale, x, y } = e.detail
     this.setData({ scale, x, y })
+  },
+
+  onCropChange(e: any) {
+    const { x, y } = e.detail
+    this.setData({ cropX: x, cropY: y })
   },
 
   onRotate() {
@@ -119,8 +134,9 @@ Page({
         // 但是 mask-middle 的高度是 cropHeight，所以 cropBox 的 top 是 (containerHeight - cropHeight) / 2
         // cropBox 的 left 是 (containerWidth - cropWidth) / 2
         
-        const cropLeft = (this.data.containerWidth - this.data.cropWidth) / 2
-        const cropTop = (this.data.containerHeight - this.data.cropHeight) / 2
+        // 现在 cropBox 是可移动的，位置由 cropX, cropY 决定
+        const cropLeft = this.data.cropX
+        const cropTop = this.data.cropY
 
         // 图片当前的实际位置和大小
         // movable-view 的 x, y 是相对于 movable-area 左上角的
@@ -139,9 +155,11 @@ Page({
         
         // 还需要考虑 scale 和 rotate
         // 旋转中心通常是图片中心
+        // 注意：movable-view 的 x, y 在 scale 生效时，通常代表视觉上的左上角（或者说 transform-origin 为 0,0 时的效果）
+        // 因此计算中心点时需要考虑 scale
         
-        const imgCenterX = this.data.x + this.data.imgWidth / 2
-        const imgCenterY = this.data.y + this.data.imgHeight / 2
+        const imgCenterX = this.data.x + (this.data.imgWidth * this.data.scale) / 2
+        const imgCenterY = this.data.y + (this.data.imgHeight * this.data.scale) / 2
         
         const imgCenterX_in_canvas = imgCenterX - cropLeft
         const imgCenterY_in_canvas = imgCenterY - cropTop

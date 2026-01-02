@@ -35,37 +35,26 @@ page {
   display: block;
 }
 
-/* 遮罩层样式 */
-.mask {
+/* 取景框层样式 */
+.crop-box-area {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
   z-index: 10;
 }
 
-.mask-top, .mask-bottom {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.6);
+.crop-box-view {
+  /* 初始大小，会在 JS 中动态设置 */
+  box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.6);
 }
 
-.mask-middle {
-  display: flex;
-  /* height 会在 JS 中设置 */
-}
-
-.mask-left, .mask-right {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.6);
-}
-
-.crop-box {
+.crop-box-inner {
+  width: 100%;
+  height: 100%;
   border: 2px solid #fff;
   box-sizing: border-box;
-  /* width 和 height 会在 JS 中设置 */
 }
 
 .footer {
