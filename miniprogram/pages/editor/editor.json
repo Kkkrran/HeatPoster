@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "绘画",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "t-slider": "tdesign-miniprogram/slider/slider",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}

@@ -1,0 +1,93 @@
+page {
+  height: 100vh;
+}
+
+.page {
+  min-height: 100vh;
+  background: #f3f5f7;
+}
+
+.header {
+  padding: 32rpx 32rpx 16rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+
+.subtitle {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #5f6b7a;
+}
+
+.section {
+  padding: 0 32rpx 16rpx;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  border: 1px solid #e7e9ee;
+  padding: 24rpx;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.card-desc {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #5f6b7a;
+}
+
+.em {
+  font-weight: 600;
+  color: #0052d9;
+}
+
+.card-actions {
+  margin-top: 16rpx;
+  display: flex;
+  gap: 16rpx;
+}
+
+.about-grid {
+  margin-top: 16rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.about-item {
+  border-radius: 20rpx;
+  border: 1px solid #e7e9ee;
+  padding: 20rpx;
+}
+
+.about-k {
+  font-size: 24rpx;
+  color: #1f2329;
+  font-weight: 600;
+}
+
+.about-v {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #5f6b7a;
+}
+
+.footer-tip {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  color: #5f6b7a;
+}
+
+.bottom {
+  padding: 16rpx 32rpx 32rpx;
+}

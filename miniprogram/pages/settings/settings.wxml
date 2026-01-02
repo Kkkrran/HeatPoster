@@ -1,0 +1,51 @@
+<!-- 设置页（TDesign Weixin） -->
+<view class="page">
+  <view class="header">
+    <view class="title">设置</view>
+    <view class="subtitle">权限 / 缓存 / 关于</view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-title">相册导出</view>
+      <view class="card-desc">导出作品到系统相册需要 <text class="em">scope.writePhotosAlbum</text> 授权。</view>
+      <view class="card-actions">
+        <t-button theme="primary" size="small" bindtap="onRequestAlbumAuth">申请授权</t-button>
+        <t-button variant="outline" theme="default" size="small" bindtap="onOpenSetting">去设置</t-button>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <t-cell-group>
+      <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
+        <view slot="note">
+          <t-button variant="outline" size="small" theme="default" bindtap="onClearCache">清理</t-button>
+        </view>
+      </t-cell>
+      <t-cell title="撤回步数上限" description="默认 50 步（占位）" note="50" />
+      <t-cell title="自动保存" description="从编辑页返回时提示保存（占位）" note="关闭" />
+    </t-cell-group>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-title">关于</view>
+      <view class="about-grid">
+        <view class="about-item">
+          <view class="about-k">版本</view>
+          <view class="about-v">0.1.0</view>
+        </view>
+        <view class="about-item">
+          <view class="about-k">存储方式</view>
+          <view class="about-v">本地文件 + Storage</view>
+        </view>
+      </view>
+      <view class="footer-tip">破坏性操作（删除/清空）需二次确认；Toast/Dialog 可由 TDesign Weixin 承担。</view>
+    </view>
+  </view>
+
+  <view class="bottom">
+    <t-button variant="outline" theme="default" block bindtap="onBackHome">返回作品库</t-button>
+  </view>
+</view>

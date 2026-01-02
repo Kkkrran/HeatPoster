@@ -1,0 +1,52 @@
+<!-- 绘画编辑页（TDesign Weixin） -->
+<view class="page">
+  <view class="canvas-wrap">
+    <!-- 原型阶段：先用 canvas 占位；真实绘制逻辑后续补齐 -->
+    <canvas type="2d" id="paintCanvas" class="canvas"></canvas>
+
+    <!-- 左下角工具按钮（模拟 prototype 的三角尖） -->
+    <view class="tool-fab" bindtap="openTools" aria-label="打开工具面板">
+      <view class="tool-triangle"></view>
+    </view>
+    <view class="tool-hint">工具</view>
+  </view>
+
+  <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
+    <view class="sheet">
+      <view class="grabber"></view>
+      <view class="sheet-header">
+        <view>
+          <view class="sheet-title">工具与设置</view>
+          <view class="sheet-subtitle">缩小占用，画布更大</view>
+        </view>
+        <t-button variant="outline" size="small" theme="default" bindtap="closeTools">关闭</t-button>
+      </view>
+
+      <view class="tool-row">
+        <t-button variant="outline" size="small" theme="default" bindtap="onUndo">撤回</t-button>
+        <t-button variant="outline" size="small" theme="default" disabled="{{!canRedo}}" bindtap="onRedo">重做</t-button>
+        <t-button variant="outline" size="small" theme="default" bindtap="onClear">清空</t-button>
+        <t-button theme="primary" size="small" bindtap="onSave">保存</t-button>
+      </view>
+
+      <view class="panel">
+        <view class="panel-title">画笔半径 <text class="panel-value">{{brushRadius}}</text></view>
+        <t-slider value="{{brushRadius}}" min="6" max="60" step="1" bindchange="onBrushRadiusChange" />
+        <view class="panel-hint">范围：6 ~ 60</view>
+      </view>
+
+      <view class="panel">
+        <view class="panel-title">增热速率 <text class="panel-value">{{heatRate}}</text></view>
+        <t-slider value="{{heatRate}}" min="0.2" max="3" step="0.1" bindchange="onHeatRateChange" />
+        <view class="panel-hint">范围：0.2 ~ 3.0</view>
+      </view>
+
+      <view class="panel panel-tip">
+        <view class="panel-title">提示（原型）</view>
+        <view class="panel-hint">按“笔画结束”入栈；撤回后新绘制会清空重做栈。</view>
+      </view>
+    </view>
+  </t-popup>
+
+  <t-toast id="t-toast" />
+</view>

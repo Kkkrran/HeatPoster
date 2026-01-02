@@ -1,11 +1,13 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/editor/editor",
+    "pages/settings/settings",
     "pages/logs/logs"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "Weixin",
+    "navigationBarTitleText": "热力图绘画",
     "navigationBarBackgroundColor": "#ffffff"
   },
   "componentFramework": "glass-easel",

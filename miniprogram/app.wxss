@@ -1,4 +1,6 @@
 /**app.wxss**/
+@import "tdesign-miniprogram/common/index.wxss";
+
 .container {
   height: 100%;
   display: flex;
