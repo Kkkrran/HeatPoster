@@ -1,5 +1,16 @@
 <!-- 绘画编辑页（TDesign Weixin） -->
 <view class="page">
+  <!-- 顶部操作栏 -->
+  <view class="top-bar">
+    <view class="top-left">
+      <view class="circle-btn {{!canUndo ? 'disabled' : ''}}" bindtap="onUndo">撤回</view>
+      <view class="circle-btn {{!canRedo ? 'disabled' : ''}}" bindtap="onRedo">重做</view>
+    </view>
+    <view class="top-right">
+      <view class="rect-btn primary" bindtap="onSave">保存</view>
+    </view>
+  </view>
+
   <view class="canvas-wrap">
     <!-- 原型阶段：先用 canvas 占位；真实绘制逻辑后续补齐 -->
     <canvas 
@@ -20,24 +31,10 @@
       class="canvas-snapshot" 
       mode="scaleToFill"
     ></image>
+  </view>
 
-    <!-- 顶部操作栏：使用 cover-view 确保在 Canvas 上方可见 -->
-    <cover-view class="top-bar">
-      <cover-view class="top-left">
-        <cover-view class="circle-btn {{!canUndo ? 'disabled' : ''}}" bindtap="onUndo">
-          <cover-image src="/assets/undo.png" wx:if="{{false}}"></cover-image> <!-- 暂无图标，用文字 -->
-          <cover-view>撤回</cover-view>
-        </cover-view>
-        <cover-view class="circle-btn {{!canRedo ? 'disabled' : ''}}" bindtap="onRedo">
-          <cover-view>重做</cover-view>
-        </cover-view>
-      </cover-view>
-      <cover-view class="top-right">
-        <cover-view class="rect-btn primary" bindtap="onSave">保存</cover-view>
-      </cover-view>
-    </cover-view>
-
-    <!-- 左下角工具按钮（模拟 prototype 的三角尖） -->
+  <!-- 底部工具栏 -->
+  <view class="bottom-bar">
     <view class="tool-fab" bindtap="openTools" aria-label="打开工具面板">
       <view class="tool-triangle"></view>
     </view>

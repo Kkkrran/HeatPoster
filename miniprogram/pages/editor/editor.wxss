@@ -12,7 +12,8 @@ page {
 .canvas-wrap {
   flex: 1;
   position: relative;
-  padding: 24rpx;
+  padding: 0 24rpx;
+  overflow: hidden;
 }
 
 .canvas {
@@ -21,7 +22,6 @@ page {
   border-radius: 24rpx;
   background: #ffffff;
   border: 1px solid #e7e9ee;
-  /* 确保画布层级低于工具面板 */
   position: relative;
 }
 
@@ -35,20 +35,16 @@ page {
 }
 
 .top-bar {
-  position: absolute;
-  top: 40rpx;
-  left: 40rpx;
-  right: 40rpx;
+  padding: 24rpx 32rpx;
   display: flex;
   justify-content: space-between;
-  pointer-events: none; /* 让空白区域不阻挡下方 Canvas 点击 */
-  z-index: 100;
+  background: #f3f5f7;
+  z-index: 10;
 }
 
 .top-left, .top-right {
   display: flex;
   gap: 20rpx;
-  pointer-events: auto; /* 恢复按钮点击 */
 }
 
 .circle-btn {
@@ -83,10 +79,16 @@ page {
   color: #ffffff;
 }
 
+.bottom-bar {
+  padding: 24rpx 32rpx;
+  display: flex;
+  align-items: center;
+  background: #f3f5f7;
+  height: 140rpx;
+}
+
 .tool-fab {
-  position: absolute;
-  left: 24rpx;
-  bottom: 24rpx;
+  position: relative;
   width: 104rpx;
   height: 104rpx;
   border-radius: 32rpx;
@@ -96,7 +98,7 @@ page {
   align-items: center;
   justify-content: center;
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
-  z-index: 10;
+  margin-right: 24rpx;
 }
 
 .tool-triangle {
@@ -108,16 +110,9 @@ page {
 }
 
 .tool-hint {
-  position: absolute;
-  left: 148rpx;
-  bottom: 46rpx;
-  padding: 10rpx 16rpx;
-  font-size: 22rpx;
+  position: relative;
+  font-size: 28rpx;
   color: #5f6b7a;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #e7e9ee;
-  border-radius: 999px;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
 }
 
 .sheet {
