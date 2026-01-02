@@ -51,16 +51,26 @@
         <t-button variant="outline" size="small" theme="default" bindtap="onClear">清空画布</t-button>
       </view>
 
-      <view class="panel">
-        <view class="panel-title">画笔半径 <text class="panel-value">{{brushRadius}}</text></view>
-        <t-slider value="{{brushRadius}}" min="6" max="60" step="1" bind:change="onBrushRadiusChange" />
-        <view class="panel-hint">范围：6 ~ 60</view>
-      </view>
+      <view class="slider-row">
+        <view class="slider-card">
+          <view class="slider-header">
+            <text class="label">画笔半径</text>
+            <text class="value">{{brushRadius}}</text>
+          </view>
+          <view class="slider-vertical-box">
+            <t-slider vertical value="{{brushRadius}}" min="6" max="60" step="1" bind:change="onBrushRadiusChange" />
+          </view>
+        </view>
 
-      <view class="panel">
-        <view class="panel-title">增热速率 <text class="panel-value">{{heatRate}}</text></view>
-        <t-slider value="{{heatRate}}" min="0.2" max="3" step="0.1" bind:change="onHeatRateChange" />
-        <view class="panel-hint">范围：0.2 ~ 3.0</view>
+        <view class="slider-card">
+          <view class="slider-header">
+            <text class="label">增热速率</text>
+            <text class="value">{{heatRate}}</text>
+          </view>
+          <view class="slider-vertical-box">
+            <t-slider vertical value="{{heatRate}}" min="0.2" max="3" step="0.1" bind:change="onHeatRateChange" />
+          </view>
+        </view>
       </view>
 
       <view class="panel panel-tip">

@@ -157,3 +157,45 @@ page {
 .panel-tip {
   border-style: dashed;
 }
+
+.slider-row {
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx 32rpx 0;
+}
+
+.slider-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e7e9ee;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.slider-header .label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.slider-header .value {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #0052d9;
+}
+
+.slider-vertical-box {
+  height: 300rpx;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 10rpx;
+}
