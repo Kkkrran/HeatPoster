@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>热力图绘画 - 作品库</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      /* 轻量模拟 TDesign 风格（色彩、圆角、阴影、字体） */
+      --td-brand: #0052d9;
+      --td-brand-hover: #003cab;
+      --td-text-1: #1f2329;
+      --td-text-2: #5f6b7a;
+      --td-bg: #f3f5f7;
+      --td-card: #ffffff;
+      --td-border: #e7e9ee;
+      --td-radius: 14px;
+      --td-shadow: 0 8px 24px rgba(0,0,0,.08);
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--td-bg);
+      color: var(--td-text-1);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .td-card{ background: var(--td-card); border: 1px solid var(--td-border); border-radius: var(--td-radius); }
+    .td-btn{ border-radius: 999px; }
+    .td-primary{ background: var(--td-brand); }
+    .td-primary:hover{ background: var(--td-brand-hover); }
+    .td-ghost{ border: 1px solid var(--td-border); background: #fff; }
+    .td-badge{ background: rgba(0,82,217,.08); color: var(--td-brand); }
+  </style>
+</head>
+<body>
+  <!-- 顶部状态栏占位（更像小程序） -->
+  <div class="px-4 pt-3 pb-2">
+    <div class="flex items-center justify-between">
+      <div class="text-xs text-[var(--td-text-2)]">9:41</div>
+      <div class="flex items-center gap-1 text-[10px] text-[var(--td-text-2)]">
+        <span class="inline-block w-3 h-2 rounded-sm border border-[var(--td-border)]"></span>
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-[var(--td-text-2)]"></span>
+        <span>5G</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 pb-24">
+    <!-- 标题栏 -->
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h1 class="text-lg font-semibold">作品库</h1>
+        <p class="text-xs text-[var(--td-text-2)] mt-0.5">热力图绘画 · 本地保存</p>
+      </div>
+
+      <button class="td-btn td-primary text-white px-4 py-2 text-sm font-medium shadow">
+        + 新建
+      </button>
+    </div>
+
+    <!-- 搜索/提示条（原型占位） -->
+    <div class="td-card p-3 mb-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex-1">
+          <div class="text-sm font-medium">小提示</div>
+          <div class="text-xs text-[var(--td-text-2)] mt-0.5">按住画布越久颜色越暖；支持多级撤回与重做。</div>
+        </div>
+        <span class="td-badge text-xs px-2 py-1 rounded-full">MVP</span>
+      </div>
+    </div>
+
+    <!-- 作品列表 -->
+    <div class="grid grid-cols-2 gap-3">
+      <!-- Card 1 -->
+      <div class="td-card overflow-hidden">
+        <div class="h-28 bg-gradient-to-br from-cyan-300 via-yellow-200 to-red-400"></div>
+        <div class="p-3">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">未命名作品</div>
+              <div class="text-xs text-[var(--td-text-2)] mt-0.5">更新：2026/01/02</div>
+            </div>
+            <button class="td-ghost td-btn px-2 py-1 text-xs">⋯</button>
+          </div>
+          <div class="mt-2 flex gap-2">
+            <button class="flex-1 td-btn td-ghost py-2 text-xs">继续编辑</button>
+            <button class="flex-1 td-btn td-primary text-white py-2 text-xs">导出</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="td-card overflow-hidden">
+        <div class="h-28 bg-gradient-to-br from-indigo-300 via-emerald-200 to-orange-300"></div>
+        <div class="p-3">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">热力练习</div>
+              <div class="text-xs text-[var(--td-text-2)] mt-0.5">更新：2026/01/01</div>
+            </div>
+            <button class="td-ghost td-btn px-2 py-1 text-xs">⋯</button>
+          </div>
+          <div class="mt-2 flex gap-2">
+            <button class="flex-1 td-btn td-ghost py-2 text-xs">继续编辑</button>
+            <button class="flex-1 td-btn td-primary text-white py-2 text-xs">导出</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空态 -->
+      <div class="col-span-2 td-card p-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[rgba(0,82,217,.1)] flex items-center justify-center text-[var(--td-brand)] font-bold">H</div>
+          <div>
+            <div class="text-sm font-semibold">还可以创建更多作品</div>
+            <div class="text-xs text-[var(--td-text-2)] mt-0.5">点击右上角「新建」，进入热力绘画编辑页。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ActionSheet / Dialog 原型占位 -->
+    <div class="mt-4 text-xs text-[var(--td-text-2)]">
+      <div class="td-card p-3">
+        <div class="font-medium text-[var(--td-text-1)]">作品更多操作（占位）</div>
+        <div class="mt-1">ActionSheet：重命名 / 删除 / 导出到相册</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 TabBar（原型） -->
+  <div class="fixed bottom-0 left-0 right-0 px-4 pb-4">
+    <div class="td-card shadow-lg px-4 py-3 flex items-center justify-around">
+      <div class="text-center">
+        <div class="text-sm font-semibold text-[var(--td-brand)]">作品</div>
+        <div class="text-[10px] text-[var(--td-text-2)]">home</div>
+      </div>
+      <div class="text-center opacity-70">
+        <div class="text-sm font-semibold">设置</div>
+        <div class="text-[10px] text-[var(--td-text-2)]">settings</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

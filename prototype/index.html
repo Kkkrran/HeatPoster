@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>热力图绘画 - 原型总览</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		:root{
+			--td-brand: #0052d9;
+			--td-text-1: #1f2329;
+			--td-text-2: #5f6b7a;
+			--td-bg: #0b1220;
+			--td-panel: #0f172a;
+			--td-border: rgba(255,255,255,.12);
+			--td-card: rgba(255,255,255,.06);
+			--td-radius: 18px;
+		}
+		body{
+			margin: 0;
+			background:
+				radial-gradient(1200px 700px at 20% 10%, rgba(0,82,217,.35), transparent 60%),
+				radial-gradient(1000px 600px at 90% 30%, rgba(255,190,0,.20), transparent 55%),
+				radial-gradient(1000px 600px at 40% 85%, rgba(0,191,178,.18), transparent 55%),
+				var(--td-bg);
+			color: #e5e7eb;
+			font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial;
+		}
+
+		/* 手机壳外观 */
+		.device{
+			width: 390px; /* 近似 iPhone 14 逻辑宽 */
+			border-radius: 44px;
+			background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+			border: 1px solid var(--td-border);
+			box-shadow:
+				0 20px 60px rgba(0,0,0,.55),
+				inset 0 1px 0 rgba(255,255,255,.12);
+			padding: 14px;
+		}
+		.device-inner{
+			border-radius: 36px;
+			overflow: hidden;
+			background: #111827;
+			border: 1px solid rgba(255,255,255,.10);
+		}
+		.device-notch{
+			position: absolute;
+			top: 10px;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 160px;
+			height: 28px;
+			border-radius: 999px;
+			background: rgba(0,0,0,.55);
+			border: 1px solid rgba(255,255,255,.10);
+			backdrop-filter: blur(8px);
+		}
+		.device-iframe{
+			width: 100%;
+			height: 820px; /* 统一展示高度（编辑页画布更大） */
+			border: 0;
+			background: #f3f5f7;
+		}
+
+		.pill{ border: 1px solid var(--td-border); background: var(--td-card); }
+	</style>
+</head>
+<body>
+	<div class="max-w-[1320px] mx-auto px-6 py-10">
+		<div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+			<div>
+				<div class="inline-flex items-center gap-2 pill rounded-full px-3 py-1 text-xs text-slate-200">
+					<span class="w-2 h-2 rounded-full" style="background: var(--td-brand);"></span>
+					原型总览（iframe 平铺）
+				</div>
+				<h1 class="text-2xl font-semibold mt-3">热力图绘画 · WeChat Mini Program Prototype</h1>
+				<p class="text-sm text-slate-300 mt-2 max-w-2xl">
+					说明：本页面不使用跳转链接，直接用 <span class="font-mono">iframe</span> 平铺展示所有界面。
+					子页面使用 <span class="font-semibold">Tailwind CSS</span> + <span class="font-semibold">TDesign 风格</span>（圆角、色彩、层级、按钮）。
+				</p>
+			</div>
+
+			<div class="pill rounded-2xl px-4 py-3 text-xs text-slate-200">
+				<div class="font-semibold">页面清单</div>
+				<div class="mt-1 text-slate-300">作品库 / 编辑 / 设置</div>
+			</div>
+		</div>
+
+		<div class="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+			<!-- Home -->
+			<div>
+				<div class="flex items-center justify-between mb-3">
+					<div>
+						<div class="text-sm font-semibold">作品库（home）</div>
+						<div class="text-xs text-slate-400">新建、继续编辑、导出、更多操作占位</div>
+					</div>
+					<span class="pill rounded-full px-3 py-1 text-xs">home.html</span>
+				</div>
+
+				<div class="device mx-auto">
+					<div class="relative device-inner">
+						<div class="device-notch"></div>
+						<iframe class="device-iframe" src="home.html" title="home"></iframe>
+					</div>
+				</div>
+			</div>
+
+			<!-- Editor -->
+			<div>
+				<div class="flex items-center justify-between mb-3">
+					<div>
+						<div class="text-sm font-semibold">绘画编辑（editor）</div>
+						<div class="text-xs text-slate-400">画布、画笔参数、撤回/重做/清空/保存</div>
+					</div>
+					<span class="pill rounded-full px-3 py-1 text-xs">editor.html</span>
+				</div>
+
+				<div class="device mx-auto">
+					<div class="relative device-inner">
+						<div class="device-notch"></div>
+						<iframe class="device-iframe" src="editor.html" title="editor"></iframe>
+					</div>
+				</div>
+			</div>
+
+			<!-- Settings -->
+			<div>
+				<div class="flex items-center justify-between mb-3">
+					<div>
+						<div class="text-sm font-semibold">设置（settings）</div>
+						<div class="text-xs text-slate-400">授权说明、清理缓存、关于（占位）</div>
+					</div>
+					<span class="pill rounded-full px-3 py-1 text-xs">settings.html</span>
+				</div>
+
+				<div class="device mx-auto">
+					<div class="relative device-inner">
+						<div class="device-notch"></div>
+						<iframe class="device-iframe" src="settings.html" title="settings"></iframe>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-10 pill rounded-2xl p-4 text-xs text-slate-300">
+			<div class="font-semibold text-slate-200">备注</div>
+			<ul class="list-disc ml-5 mt-2 space-y-1">
+				<li>这些页面是“视觉与信息架构原型”，用于确认交互与组件布局；不包含真实小程序 API 调用。</li>
+				<li>下一步如果要更“真”，可以把按钮点击做成纯前端的弹窗/ActionSheet 交互（仍不跳转）。</li>
+			</ul>
+		</div>
+	</div>
+</body>
+</html>

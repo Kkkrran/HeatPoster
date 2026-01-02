@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>热力图绘画 - 设置</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      --td-brand: #0052d9;
+      --td-text-1: #1f2329;
+      --td-text-2: #5f6b7a;
+      --td-bg: #f3f5f7;
+      --td-card: #ffffff;
+      --td-border: #e7e9ee;
+      --td-radius: 14px;
+      --td-shadow: 0 8px 24px rgba(0,0,0,.08);
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--td-bg);
+      color: var(--td-text-1);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial;
+    }
+    .td-card{ background: var(--td-card); border: 1px solid var(--td-border); border-radius: var(--td-radius); }
+    .td-btn{ border-radius: 999px; }
+    .td-primary{ background: var(--td-brand); }
+    .td-primary:hover{ filter: brightness(.95); }
+    .td-ghost{ border: 1px solid var(--td-border); background: #fff; }
+    .td-cell{ border-bottom: 1px solid var(--td-border); }
+    .td-cell:last-child{ border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="px-4 pt-3 pb-2">
+    <div class="flex items-center justify-between">
+      <div class="text-xs text-[var(--td-text-2)]">9:41</div>
+      <div class="flex items-center gap-1 text-[10px] text-[var(--td-text-2)]">
+        <span class="inline-block w-3 h-2 rounded-sm border border-[var(--td-border)]"></span>
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-[var(--td-text-2)]"></span>
+        <span>5G</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 pb-24">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h1 class="text-lg font-semibold">设置</h1>
+        <p class="text-xs text-[var(--td-text-2)] mt-0.5">权限 / 缓存 / 关于</p>
+      </div>
+      <button class="td-btn td-ghost px-4 py-2 text-sm">返回</button>
+    </div>
+
+    <!-- 权限与导出说明 -->
+    <div class="td-card p-4 mb-3" style="box-shadow: var(--td-shadow);">
+      <div class="text-sm font-semibold">相册导出</div>
+      <div class="text-xs text-[var(--td-text-2)] mt-1">
+        导出作品到系统相册需要 <span class="font-medium">scope.writePhotosAlbum</span> 授权。
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button class="td-btn td-primary text-white px-4 py-2 text-sm">申请授权</button>
+        <button class="td-btn td-ghost px-4 py-2 text-sm">去设置</button>
+      </div>
+    </div>
+
+    <!-- 设置项（TDesign 风格 cell） -->
+    <div class="td-card overflow-hidden">
+      <div class="td-cell p-4 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold">清理缓存</div>
+          <div class="text-xs text-[var(--td-text-2)] mt-0.5">删除本地临时文件与缩略图（不删除作品库索引）</div>
+        </div>
+        <button class="td-btn td-ghost px-3 py-2 text-xs">清理</button>
+      </div>
+      <div class="td-cell p-4 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold">撤回步数上限</div>
+          <div class="text-xs text-[var(--td-text-2)] mt-0.5">默认 50 步（原型占位）</div>
+        </div>
+        <span class="text-xs text-[var(--td-text-2)]">50</span>
+      </div>
+      <div class="td-cell p-4 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold">自动保存</div>
+          <div class="text-xs text-[var(--td-text-2)] mt-0.5">从编辑页返回时提示保存（原型占位）</div>
+        </div>
+        <span class="text-xs text-[var(--td-text-2)]">关闭</span>
+      </div>
+    </div>
+
+    <!-- 关于 -->
+    <div class="mt-3 td-card p-4">
+      <div class="text-sm font-semibold">关于</div>
+      <div class="mt-2 grid grid-cols-2 gap-3 text-xs text-[var(--td-text-2)]">
+        <div class="td-card p-3">
+          <div class="text-[var(--td-text-1)] font-medium">版本</div>
+          <div class="mt-1">0.1.0 (prototype)</div>
+        </div>
+        <div class="td-card p-3">
+          <div class="text-[var(--td-text-1)] font-medium">存储方式</div>
+          <div class="mt-1">本地文件 + Storage</div>
+        </div>
+      </div>
+      <div class="mt-3 text-xs text-[var(--td-text-2)]">
+        破坏性操作（删除/清空）需二次确认；Toast/Dialog 在小程序端由 TDesign Weixin 承担。
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 TabBar（原型） -->
+  <div class="fixed bottom-0 left-0 right-0 px-4 pb-4">
+    <div class="td-card shadow-lg px-4 py-3 flex items-center justify-around" style="box-shadow: var(--td-shadow);">
+      <div class="text-center opacity-70">
+        <div class="text-sm font-semibold">作品</div>
+        <div class="text-[10px] text-[var(--td-text-2)]">home</div>
+      </div>
+      <div class="text-center">
+        <div class="text-sm font-semibold text-[var(--td-brand)]">设置</div>
+        <div class="text-[10px] text-[var(--td-text-2)]">settings</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
