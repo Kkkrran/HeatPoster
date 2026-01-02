@@ -15,25 +15,35 @@
   </view>
 
   <view class="canvas-wrap">
-    <!-- 原型阶段：先用 canvas 占位；真实绘制逻辑后续补齐 -->
-    <canvas 
-      type="2d" 
-      id="paintCanvas" 
-      class="canvas"
-      hidden="{{isCanvasHidden}}"
-      bindtouchstart="onTouchStart"
-      bindtouchmove="onTouchMove"
-      bindtouchend="onTouchEnd"
-      bindtouchcancel="onTouchEnd"
-    ></canvas>
-    
-    <!-- 快照图片，用于在打开工具面板时替代 Canvas，避免原生组件遮挡 -->
-    <image 
-      wx:if="{{isCanvasHidden}}" 
-      src="{{snapshotUrl}}" 
-      class="canvas-snapshot" 
-      mode="scaleToFill"
-    ></image>
+    <view class="canvas-container">
+      <!-- 背景图 -->
+      <image 
+        wx:if="{{backgroundImage}}" 
+        src="{{backgroundImage}}" 
+        class="canvas-bg" 
+        mode="scaleToFill"
+      ></image>
+
+      <!-- 原型阶段：先用 canvas 占位；真实绘制逻辑后续补齐 -->
+      <canvas 
+        type="2d" 
+        id="paintCanvas" 
+        class="canvas {{backgroundImage ? 'transparent' : ''}}"
+        hidden="{{isCanvasHidden}}"
+        bindtouchstart="onTouchStart"
+        bindtouchmove="onTouchMove"
+        bindtouchend="onTouchEnd"
+        bindtouchcancel="onTouchEnd"
+      ></canvas>
+      
+      <!-- 快照图片，用于在打开工具面板时替代 Canvas，避免原生组件遮挡 -->
+      <image 
+        wx:if="{{isCanvasHidden}}" 
+        src="{{snapshotUrl}}" 
+        class="canvas-snapshot" 
+        mode="scaleToFill"
+      ></image>
+    </view>
   </view>
 
   <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
@@ -45,6 +55,10 @@
           <view class="sheet-subtitle">缩小占用，画布更大</view>
         </view>
         <t-button theme="danger" variant="base" size="small" bindtap="onClear">清空画布</t-button>
+      </view>
+
+      <view class="tool-row" style="padding: 0 32rpx; margin-top: 20rpx;">
+        <t-button theme="primary" variant="outline" block bindtap="onImportBackground">导入背景图</t-button>
       </view>
 
       <view class="slider-row">

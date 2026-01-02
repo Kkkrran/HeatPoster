@@ -3,6 +3,7 @@
   "pages": [
     "pages/index/index",
     "pages/editor/editor",
+    "pages/cropper/cropper",
     "pages/settings/settings",
     "pages/logs/logs"
   ],

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "图片处理",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-slider": "tdesign-miniprogram/slider/slider"
+  }
+}

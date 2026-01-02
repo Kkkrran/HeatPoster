@@ -28,6 +28,7 @@ Component({
     openid: '',
     snapshotUrl: '',
     isCanvasHidden: false,
+    backgroundImage: '',
   },
 
   lifetimes: {
@@ -442,6 +443,51 @@ Component({
         console.error(err)
         this.toast('加载失败', 'error')
       }
-    }
+    },
+
+    onImportBackground() {
+      const self = this as any
+      wx.chooseImage({
+        count: 1,
+        sizeType: ['original', 'compressed'],
+        sourceType: ['album', 'camera'],
+        success(res) {
+          const tempFilePaths = res.tempFilePaths
+          if (tempFilePaths.length > 0) {
+            const src = tempFilePaths[0]
+            
+            // 获取 Canvas 大小
+            const query = self.createSelectorQuery()
+            query.select('#paintCanvas')
+              .fields({ node: true, size: true })
+              .exec((res: any) => {
+                const width = res[0].width
+                const height = res[0].height
+                
+                wx.navigateTo({
+                  url: '/pages/cropper/cropper',
+                  events: {
+                    acceptDataFromCropper: function(data: any) {
+                      self.setData({
+                        backgroundImage: data.tempFilePath,
+                        // 关闭工具面板，以便查看背景
+                        toolsVisible: false,
+                        isCanvasHidden: false
+                      })
+                    }
+                  },
+                  success: function(res) {
+                    res.eventChannel.emit('acceptDataFromOpenerPage', { 
+                      src: src,
+                      targetWidth: width,
+                      targetHeight: height
+                    })
+                  }
+                })
+              })
+          }
+        }
+      })
+    },
   },
 })
