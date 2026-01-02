@@ -123,7 +123,11 @@ Component({
     },
 
     onMoreSelect(e: any) {
-      const { value } = e.detail || {}
+      console.log('onMoreSelect', e)
+      // TDesign ActionSheet selected 事件 detail 结构通常为 { selected: Item, index: number }
+      const { selected } = e.detail || {}
+      const value = selected?.value
+
       const id = this.data.currentArtworkId
       this.setData({ moreVisible: false })
       if (!id) return
@@ -139,7 +143,10 @@ Component({
           this.exportArtworkToAlbum(id)
           break
         default:
-          wx.showToast({ title: String(value || ''), icon: 'none' })
+          // 如果获取不到 value，尝试直接打印提示，便于调试
+          if (!value) {
+             console.warn('Unknown action value:', e.detail)
+          }
       }
     },
 

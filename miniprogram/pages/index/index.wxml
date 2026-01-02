@@ -42,5 +42,12 @@
     <t-button variant="outline" theme="default" block bind:tap="onGoSettings">设置</t-button>
   </view>
 
-  <t-action-sheet visible="{{moreVisible}}" items="{{moreItems}}" bind:close="onCloseMore" bind:selected="onMoreSelect" />
+  <t-action-sheet 
+    visible="{{moreVisible}}" 
+    items="{{moreItems}}" 
+    show-cancel
+    bind:close="onCloseMore" 
+    bind:cancel="onCloseMore"
+    bind:selected="onMoreSelect" 
+  />
 </view>
