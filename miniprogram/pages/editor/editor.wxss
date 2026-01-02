@@ -12,7 +12,7 @@ page {
 .canvas-wrap {
   flex: 1;
   position: relative;
-  padding: 0 24rpx;
+  padding: 0 24rpx 24rpx;
   overflow: hidden;
 }
 
@@ -79,41 +79,7 @@ page {
   color: #ffffff;
 }
 
-.bottom-bar {
-  padding: 24rpx 32rpx;
-  display: flex;
-  align-items: center;
-  background: #f3f5f7;
-  height: 140rpx;
-}
 
-.tool-fab {
-  position: relative;
-  width: 104rpx;
-  height: 104rpx;
-  border-radius: 32rpx;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #e7e9ee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
-  margin-right: 24rpx;
-}
-
-.tool-triangle {
-  width: 0;
-  height: 0;
-  border-top: 28rpx solid transparent;
-  border-bottom: 28rpx solid transparent;
-  border-left: 36rpx solid #0052d9;
-}
-
-.tool-hint {
-  position: relative;
-  font-size: 28rpx;
-  color: #5f6b7a;
-}
 
 .sheet {
   background: #ffffff;
