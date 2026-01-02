@@ -21,6 +21,9 @@ page {
   border-radius: 24rpx;
   background: #ffffff;
   border: 1px solid #e7e9ee;
+  /* 确保画布层级低于工具面板 */
+  position: relative;
+  z-index: 1;
 }
 
 .tool-fab {
@@ -36,6 +39,7 @@ page {
   align-items: center;
   justify-content: center;
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
+  z-index: 10;
 }
 
 .tool-triangle {

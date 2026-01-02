@@ -5,7 +5,10 @@
       <view class="title">作品库</view>
       <view class="subtitle">热力图绘画 · 本地保存</view>
     </view>
-    <t-button theme="primary" size="medium" bind:tap="onCreate">新建</t-button>
+    <view class="header-actions">
+      <t-button theme="light" size="medium" icon="refresh" bind:tap="refresh" style="margin-right: 16rpx;"></t-button>
+      <t-button theme="primary" size="medium" bind:tap="onCreate">新建</t-button>
+    </view>
   </view>
 
   <view class="tip-card">
