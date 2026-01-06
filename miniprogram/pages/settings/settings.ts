@@ -1,11 +1,11 @@
 Component({
   data: {
-    exitConfirm: false,
+    exitConfirm: true,
   },
 
   lifetimes: {
     attached() {
-      const exitConfirm = wx.getStorageSync('editor_exit_confirm') || false
+      const exitConfirm = wx.getStorageSync('editor_exit_confirm') || true
       this.setData({ exitConfirm })
     }
   },
