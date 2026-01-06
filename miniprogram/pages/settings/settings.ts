@@ -1,6 +1,6 @@
 Component({
   data: {
-    exitConfirm: true,
+    exitConfirm: false,
     maxUndoSteps: 50,
     limitDialogVisible: false,
     tempLimitValue: '',
@@ -8,7 +8,9 @@ Component({
 
   lifetimes: {
     attached() {
-      const exitConfirm = wx.getStorageSync('editor_exit_confirm') || true
+      let exitConfirm = wx.getStorageSync('editor_exit_confirm')
+      if (exitConfirm === '') exitConfirm = true // 默认为开启
+      
       const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
       this.setData({ exitConfirm, maxUndoSteps })
     }
