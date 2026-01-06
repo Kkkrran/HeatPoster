@@ -9,7 +9,7 @@
     "skylineRenderEnable": true,
     "preloadBackgroundData": false,
     "autoAudits": false,
-    "useApiHook": true,
+    "useApiHook": false,
     "showShadowRootInWxmlPanel": false,
     "useStaticServer": false,
     "useLanDebug": false,

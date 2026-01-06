@@ -661,20 +661,41 @@ Component({
     },
 
     // 搜索蓝牙设备
-    async scanBluetoothDevices() {
+    async scanBluetoothDevices(): Promise<any[]> {
       this.setData({ blueList: [] })
+      let resolved = false
       
-      bleTool.scanBleDeviceList((res: any) => {
-        console.log('搜索到的蓝牙设备:', res)
-        if (res.ResultCode == 0 && res.ResultValue?.devices) {
-          const devices = res.ResultValue.devices
-          this.setData({
-            blueList: [...this.data.blueList, ...devices]
-          })
+      try {
+        // 使用 SDK 提供的前缀过滤能力，减少无关设备
+        const prefixes = ['MP50', 'T50', 'G21', 'G15', 'SUPVAN', 'Supvan']
+        // @ts-ignore
+        if (typeof (bleTool as any).setSupportPrefixs === 'function') {
+          ;(bleTool as any).setSupportPrefixs(prefixes)
         }
-      }).catch(error => {
-        console.error('搜索蓝牙设备失败:', error)
-        this.toast('搜索失败', 'error')
+      } catch (_) {}
+
+      return new Promise<any[]>((resolve) => {
+        bleTool.scanBleDeviceList((res: any) => {
+          console.log('搜索到的蓝牙设备:', res)
+          if (res.ResultCode == 0 && res.ResultValue?.devices) {
+            const devices = res.ResultValue.devices
+            const prefixes = ['MP50', 'T50', 'G21', 'G15', 'SUPVAN', 'Supvan']
+            const filtered = devices.filter((d: any) => {
+              const name = String(d?.name || '')
+              return prefixes.some(p => name.startsWith(p))
+            })
+            const list = filtered.length > 0 ? filtered : devices
+            this.setData({ blueList: list })
+            if (!resolved) { resolved = true; resolve(list) }
+          }
+        }).catch(error => {
+          console.error('搜索蓝牙设备失败:', error)
+          this.toast('搜索失败', 'error')
+          if (!resolved) { resolved = true; resolve([]) }
+        })
+        setTimeout(() => {
+          if (!resolved) { resolved = true; resolve(this.data.blueList || []) }
+        }, 2500)
       })
     },
 
@@ -695,19 +716,18 @@ Component({
       // 检查是否已连接设备
       if (!this.data.connectedDevice) {
         // 如果没有连接，先搜索并让用户选择
-        await this.scanBluetoothDevices()
-        
-        if (this.data.blueList.length === 0) {
+        const list = await this.scanBluetoothDevices()
+        if (!list || list.length === 0) {
           this.toast('未找到打印机，请确保打印机已开启', 'warning')
           return
         }
 
         // 显示选择对话框
-        const deviceNames = this.data.blueList.map((d: any) => d.name)
+        const deviceNames = list.map((d: any) => d.name || d.deviceId || '未知设备')
         wx.showActionSheet({
           itemList: deviceNames,
           success: (res) => {
-            const selectedDevice = this.data.blueList[res.tapIndex]
+            const selectedDevice = list[res.tapIndex]
             this.connectBluetoothDevice(selectedDevice).then(() => {
               // 连接成功后继续打印
               this.printImage(imagePath)
@@ -741,7 +761,7 @@ Component({
         VerticalNum: 0,
         PaperType: 1,     // 纸张类型
         Gap: 3,           // 间隙（mm）
-        DeviceSn: this.data.connectedDevice.name, // 设备序列号
+        DeviceSn: (this.data.connectedDevice && (this.data.connectedDevice.deviceId || this.data.connectedDevice.name)) || '',
         ImageUrl: imagePath, // 图片路径（本地路径或网络URL）
         ImageWidth: 50,   // 图片宽度（mm）
         ImageHeight: 70,  // 图片高度（mm）
@@ -795,15 +815,8 @@ Component({
       // 将Canvas转换为临时文件
       try {
         this.toast('正在生成图片...', 'loading')
-        
-        const { tempFilePath } = await wx.canvasToTempFilePath({
-          canvas: self.canvas,
-          fileType: 'png',
-          quality: 0.8
-        })
-
-        // 打印图片
-        await this.printImage(tempFilePath)
+        const composedPath = await this.getComposedImagePath()
+        await this.printImage(composedPath)
       } catch (error) {
         console.error('生成图片失败', error)
         this.toast('生成图片失败', 'error')
