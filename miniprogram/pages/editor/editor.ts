@@ -456,35 +456,27 @@ Component({
           if (tempFilePaths.length > 0) {
             const src = tempFilePaths[0]
             
-            // 获取 Canvas 大小
-            const query = self.createSelectorQuery()
-            query.select('#paintCanvas')
-              .fields({ node: true, size: true })
-              .exec((res: any) => {
-                const width = res[0].width
-                const height = res[0].height
-                
-                wx.navigateTo({
-                  url: '/pages/cropper/cropper',
-                  events: {
-                    acceptDataFromCropper: function(data: any) {
-                      self.setData({
-                        backgroundImage: data.tempFilePath,
-                        // 关闭工具面板，以便查看背景
-                        toolsVisible: false,
-                        isCanvasHidden: false
-                      })
-                    }
-                  },
-                  success: function(res) {
-                    res.eventChannel.emit('acceptDataFromOpenerPage', { 
-                      src: src,
-                      targetWidth: width,
-                      targetHeight: height
-                    })
-                  }
-                })
+            // @ts-ignore
+            if (wx.editImage) {
+              // @ts-ignore
+              wx.editImage({
+                src: src,
+                success: (editRes: any) => {
+                  self.setData({
+                    backgroundImage: editRes.tempFilePath,
+                    // 关闭工具面板，以便查看背景
+                    toolsVisible: false,
+                    isCanvasHidden: false
+                  })
+                },
+                fail: (err: any) => {
+                  console.log('editImage cancelled or failed', err)
+                  // 用户取消编辑时，也可以选择不做任何事
+                }
               })
+            } else {
+              self.toast('当前微信版本不支持图片编辑', 'error')
+            }
           }
         }
       })
