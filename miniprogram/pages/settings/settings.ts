@@ -1,5 +1,22 @@
 Component({
+  data: {
+    exitConfirm: false,
+  },
+
+  lifetimes: {
+    attached() {
+      const exitConfirm = wx.getStorageSync('editor_exit_confirm') || false
+      this.setData({ exitConfirm })
+    }
+  },
+
   methods: {
+    onExitConfirmChange(e: any) {
+      const val = e.detail.value
+      this.setData({ exitConfirm: val })
+      wx.setStorageSync('editor_exit_confirm', val)
+    },
+
     onRequestAlbumAuth() {
       wx.authorize({
         scope: 'scope.writePhotosAlbum',

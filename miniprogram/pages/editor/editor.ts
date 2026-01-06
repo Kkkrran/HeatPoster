@@ -29,6 +29,7 @@ Component({
     snapshotUrl: '',
     isCanvasHidden: false,
     backgroundImage: '',
+    hasUnsavedChanges: false,
   },
 
   lifetimes: {
@@ -60,11 +61,34 @@ Component({
     },
   },
 
+  pageLifetimes: {
+    show() {
+      this.updateExitConfirmState()
+    }
+  },
+
   methods: {
     onLoad(options: any) {
       if (options && options.id) {
         this.setData({ artworkId: options.id })
         this.loadArtwork(options.id)
+      }
+    },
+
+    updateExitConfirmState() {
+      const exitConfirm = wx.getStorageSync('editor_exit_confirm') || false
+      const hasUnsavedChanges = this.data.hasUnsavedChanges
+      if (exitConfirm && hasUnsavedChanges) {
+        wx.enableAlertBeforeUnload({
+          message: '当前有未保存的修改，退出将丢失更改，确定退出吗？',
+          success: (res) => { console.log('enableAlertBeforeUnload success', res) },
+          fail: (err) => { console.log('enableAlertBeforeUnload fail', err) }
+        })
+      } else {
+        wx.disableAlertBeforeUnload({
+          success: (res) => { console.log('disableAlertBeforeUnload success', res) },
+          fail: (err) => { console.log('disableAlertBeforeUnload fail', err) }
+        })
       }
     },
 
@@ -183,8 +207,10 @@ Component({
         self.redoStack = []
         this.setData({ 
           canUndo: true,
-          canRedo: false
+          canRedo: false,
+          hasUnsavedChanges: true
         })
+        this.updateExitConfirmState()
         self.currentStroke = []
       }
     },
@@ -318,8 +344,10 @@ Component({
         self.redoStack.push(stroke)
         this.setData({ 
           canUndo: self.strokes.length > 0,
-          canRedo: true 
+          canRedo: true,
+          hasUnsavedChanges: true
         })
+        this.updateExitConfirmState()
         this.redrawAll()
         this.toast('已撤回')
       }
@@ -333,8 +361,10 @@ Component({
         self.strokes.push(stroke)
         this.setData({ 
           canUndo: true,
-          canRedo: self.redoStack.length > 0 
+          canRedo: self.redoStack.length > 0,
+          hasUnsavedChanges: true
         })
+        this.updateExitConfirmState()
         for (const p of stroke) {
           this.drawAlphaPoint(p)
         }
@@ -347,7 +377,12 @@ Component({
       const self = this as any
       self.strokes = []
       self.redoStack = []
-      this.setData({ canUndo: false, canRedo: false })
+      this.setData({ 
+        canUndo: false, 
+        canRedo: false,
+        hasUnsavedChanges: true
+      })
+      this.updateExitConfirmState()
       this.redrawAll()
       this.toast('画布已清空')
     },
@@ -410,6 +445,8 @@ Component({
           }
         })
         
+        this.setData({ hasUnsavedChanges: false })
+        this.updateExitConfirmState()
         this.toast('保存成功', 'success')
         
       } catch (err) {
