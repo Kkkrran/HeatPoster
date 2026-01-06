@@ -66,6 +66,7 @@ Component({
       { label: '重命名', value: 'rename' },
       { label: '删除', value: 'delete', theme: 'danger' },
       { label: '导出到相册', value: 'export' },
+      { label: '打印', value: 'print' },
     ],
   },
 
@@ -141,6 +142,9 @@ Component({
           break
         case 'export':
           this.exportArtworkToAlbum(id)
+          break
+        case 'print':
+          this.printArtwork(id)
           break
         default:
           // 如果获取不到 value，尝试直接打印提示，便于调试
@@ -253,6 +257,39 @@ Component({
 
     onGoSettings() {
       wx.navigateTo({ url: '/pages/settings/settings' })
+    },
+
+    async printArtwork(id: string) {
+      const item = this.data.artworks.find(a => a.id === id)
+      if (!item) {
+        wx.showToast({ title: '作品不存在', icon: 'none' })
+        return
+      }
+
+      // 如果有导出图，使用导出图；否则使用缩略图
+      const fileID = item.exportFileId || item.thumbnail
+      if (!fileID) {
+        wx.showToast({ title: '暂无可打印的图片', icon: 'none' })
+        return
+      }
+
+      try {
+        wx.showLoading({ title: '准备打印...' })
+        
+        // 下载图片到本地
+        const downloadRes = await wx.cloud.downloadFile({ fileID })
+        const tempFilePath = downloadRes.tempFilePath
+
+        // 跳转到编辑页面并传递打印参数
+        wx.navigateTo({
+          url: `/pages/editor/editor?id=${encodeURIComponent(id)}&print=true&imagePath=${encodeURIComponent(tempFilePath)}`
+        })
+      } catch (err: any) {
+        console.error('打印准备失败', err)
+        wx.showToast({ title: '准备打印失败', icon: 'none' })
+      } finally {
+        wx.hideLoading()
+      }
     },
   },
 })

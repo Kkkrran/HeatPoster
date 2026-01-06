@@ -46,6 +46,13 @@
     </view>
   </view>
 
+  <!-- 隐藏的打印Canvas -->
+  <canvas 
+    type="2d" 
+    id="printCanvas" 
+    style="position: fixed; top: -9999px; width: 1px; height: 1px;"
+  ></canvas>
+
   <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
     <view class="sheet">
       <view class="grabber"></view>
@@ -59,6 +66,10 @@
 
       <view class="tool-row" style="padding: 0 32rpx; margin-top: 20rpx;">
         <t-button theme="primary" variant="outline" block bindtap="onImportBackground">导入临时背景图</t-button>
+      </view>
+
+      <view class="tool-row" style="padding: 0 32rpx; margin-top: 20rpx;">
+        <t-button theme="primary" block bindtap="onPrint">打印作品</t-button>
       </view>
 
       <view class="slider-row">

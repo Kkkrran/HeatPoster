@@ -1,5 +1,5 @@
 {
-  "cloud":true,
+  "cloud": true,
   "pages": [
     "pages/index/index",
     "pages/editor/editor",
@@ -10,6 +10,18 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "热力图绘画",
     "navigationBarBackgroundColor": "#ffffff"
+  },
+  "permission": {
+    "scope.bluetooth": {
+      "desc": "需要蓝牙权限以连接打印机"
+    },
+    "scope.userLocation": {
+      "desc": "蓝牙搜索需要位置权限"
+    }
+  },
+  "networkTimeout": {
+    "request": 10000,
+    "downloadFile": 10000
   },
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents"

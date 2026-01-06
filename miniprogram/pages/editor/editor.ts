@@ -1,5 +1,10 @@
 // miniprogram/pages/editor/editor.ts
 
+// 导入打印机SDK
+import bleTool from '../../SUPVANAPIT50PRO/BLETool.js'
+import bleToothManage from '../../SUPVANAPIT50PRO/BLEToothManage.js'
+import constants from '../../SUPVANAPIT50PRO/Constants.js'
+
 // 定义笔触点结构
 interface HeatPoint {
   x: number
@@ -8,8 +13,8 @@ interface HeatPoint {
   opacity: number
 }
 
-// 定义笔画结构
-type Stroke = HeatPoint[]
+// 定义笔画结构（已使用，但TypeScript可能检测不到）
+// type Stroke = HeatPoint[]
 
 Component({
   properties: {
@@ -29,8 +34,13 @@ Component({
     snapshotUrl: '',
     isCanvasHidden: false,
     backgroundImage: '',
+
     hasUnsavedChanges: false,
-    maxUndoSteps: 50
+    maxUndoSteps: 50,
+    // 打印相关
+    blueList: [] as any[],
+    connectedDevice: null as any,
+    printCanvasCtx: null as any,
   },
 
   lifetimes: {
@@ -44,6 +54,7 @@ Component({
         renderLoopId: 0
       })
       this.initCanvas()
+      this.initPrintCanvas()
       this.getOpenId()
     },
     detached() {
@@ -67,6 +78,14 @@ Component({
       if (options && options.id) {
         this.setData({ artworkId: options.id })
         this.loadArtwork(options.id)
+      }
+
+      // 处理从作品库跳转过来的打印请求
+      if (options && options.print === 'true' && options.imagePath) {
+        // 延迟一下，确保Canvas已初始化
+        setTimeout(() => {
+          this.printImage(decodeURIComponent(options.imagePath))
+        }, 500)
       }
     },
 
@@ -105,6 +124,73 @@ Component({
       } catch (e) {
         console.error('getOpenId failed', e)
       }
+    },
+
+        /**
+     * 合成背景图与热力图，返回合并后的临时文件路径
+     */
+    async getComposedImagePath(): Promise<string> {
+      const self = this as any;
+      const dpr = self.dpr;
+      const width = self.width * dpr;
+      const height = self.height * dpr;
+
+      // 1. 创建一个临时的离屏 Canvas 用于合成
+      const offscreenCanvas = (wx as any).createOffscreenCanvas({ type: '2d', width, height });
+      const offscreenCtx = offscreenCanvas.getContext('2d');
+
+      // 2. 如果有背景图，先画背景
+      if (this.data.backgroundImage) {
+        const bgImg = offscreenCanvas.createImage();
+        bgImg.src = this.data.backgroundImage;
+        await new Promise((resolve) => {
+          bgImg.onload = resolve;
+          bgImg.onerror = resolve; // 容错处理
+        });
+        offscreenCtx.drawImage(bgImg, 0, 0, width, height);
+      } else {
+        // 无背景图则填充白色底（可选）
+        offscreenCtx.fillStyle = '#ffffff';
+        offscreenCtx.fillRect(0, 0, width, height);
+      }
+
+      // 3. 获取当前热力图的 ImageData 并处理颜色映射
+      if (self.memCtx && self.palette) {
+        const heatmapData = self.memCtx.getImageData(0, 0, width, height);
+        const pixels = heatmapData.data;
+        const palette = self.palette;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const alpha = pixels[i + 3];
+          if (alpha > 0) {
+            const offset = alpha * 4;
+            pixels[i] = palette[offset];
+            pixels[i + 1] = palette[offset + 1];
+            pixels[i + 2] = palette[offset + 2];
+            pixels[i + 3] = palette[offset + 3];
+          }
+        }
+
+        // 4. 将热力图绘制到合成画布上
+        // 注意：这里需要先创建一个临时的 ImageData 专用画布，再用 drawImage 覆盖，
+        // 这样热力图透明的地方才不会遮挡背景。
+        const tempHeatmapCanvas = (wx as any).createOffscreenCanvas({ type: '2d', width, height });
+        const tempHeatmapCtx = tempHeatmapCanvas.getContext('2d');
+        tempHeatmapCtx.putImageData(heatmapData, 0, 0);
+        
+        offscreenCtx.drawImage(tempHeatmapCanvas, 0, 0, width, height);
+      }
+
+      // 5. 导出合成后的图片
+      return new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({
+          canvas: offscreenCanvas,
+          fileType: 'png',
+          quality: 1,
+          success: (res) => resolve(res.tempFilePath),
+          fail: reject
+        });
+      });
     },
 
     toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
@@ -556,6 +642,183 @@ Component({
           }
         }
       })
+    },
+
+    // ========== 打印功能 ==========
+    
+    // 初始化打印Canvas
+    initPrintCanvas() {
+      const query = this.createSelectorQuery()
+      query.select('#printCanvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          if (res[0] && res[0].node) {
+            const canvas = res[0].node
+            const ctx = canvas.getContext('2d')
+            this.setData({ printCanvasCtx: ctx })
+          }
+        })
+    },
+
+    // 搜索蓝牙设备
+    async scanBluetoothDevices() {
+      this.setData({ blueList: [] })
+      
+      bleTool.scanBleDeviceList((res: any) => {
+        console.log('搜索到的蓝牙设备:', res)
+        if (res.ResultCode == 0 && res.ResultValue?.devices) {
+          const devices = res.ResultValue.devices
+          this.setData({
+            blueList: [...this.data.blueList, ...devices]
+          })
+        }
+      }).catch(error => {
+        console.error('搜索蓝牙设备失败:', error)
+        this.toast('搜索失败', 'error')
+      })
+    },
+
+    // 连接蓝牙设备
+    async connectBluetoothDevice(device: any) {
+      try {
+        await bleTool.connectBleDevice(device)
+        this.setData({ connectedDevice: device })
+        this.toast('连接成功', 'success')
+      } catch (error) {
+        console.error('连接失败:', error)
+        this.toast('连接失败', 'error')
+      }
+    },
+
+    // 打印图片（核心方法）
+    async printImage(imagePath: string) {
+      // 检查是否已连接设备
+      if (!this.data.connectedDevice) {
+        // 如果没有连接，先搜索并让用户选择
+        await this.scanBluetoothDevices()
+        
+        if (this.data.blueList.length === 0) {
+          this.toast('未找到打印机，请确保打印机已开启', 'warning')
+          return
+        }
+
+        // 显示选择对话框
+        const deviceNames = this.data.blueList.map((d: any) => d.name)
+        wx.showActionSheet({
+          itemList: deviceNames,
+          success: (res) => {
+            const selectedDevice = this.data.blueList[res.tapIndex]
+            this.connectBluetoothDevice(selectedDevice).then(() => {
+              // 连接成功后继续打印
+              this.printImage(imagePath)
+            })
+          }
+        })
+        return
+      }
+
+      // 检查Canvas是否初始化
+      if (!this.data.printCanvasCtx) {
+        this.toast('打印Canvas未初始化', 'error')
+        return
+      }
+
+      // 检查画布是否有内容
+      const self = this as any
+      if (!self.strokes || self.strokes.length === 0) {
+        this.toast('画布为空，无法打印', 'warning')
+        return
+      }
+
+      // 准备打印数据
+      const pageImageObject = [{
+        Width: 50,        // 纸张宽度（mm）
+        Height: 70,       // 纸张高度（mm）
+        Rotate: 1,        // 旋转：0-不旋转，1-90度，2-180度，3-270度
+        Copies: 1,        // 打印份数
+        Density: 6,       // 浓度：1-15
+        HorizontalNum: 0,
+        VerticalNum: 0,
+        PaperType: 1,     // 纸张类型
+        Gap: 3,           // 间隙（mm）
+        DeviceSn: this.data.connectedDevice.name, // 设备序列号
+        ImageUrl: imagePath, // 图片路径（本地路径或网络URL）
+        ImageWidth: 50,   // 图片宽度（mm）
+        ImageHeight: 70,  // 图片高度（mm）
+        Speed: 60,        // 打印速度：30-100
+      }]
+
+      this.toast('正在打印...', 'loading')
+
+      try {
+      bleToothManage.doPrintImage(
+        this.data.printCanvasCtx,
+        pageImageObject,
+        (res: any) => {
+            console.log('打印回调', res)
+            
+            if (res.ResultCode == constants.globalResultCode.ResultCode100) {
+              // 打印进度回调
+              const resultValue = res.ResultValue
+              console.log('打印尺寸:', resultValue.width, resultValue.height)
+            } else if (res.ResultCode == constants.globalResultCode.ResultCodeSuccess) {
+              // 打印完成
+              this.toast('打印完成', 'success')
+            } else {
+              this.toast('打印失败', 'error')
+            }
+          }
+        )
+      } catch (error) {
+        console.error('打印失败', error)
+        this.toast('打印失败', 'error')
+      }
+    },
+
+    // 打印当前画布（从Canvas生成图片并打印）
+    async onPrint() {
+      const self = this as any
+      
+      if (!self.canvas) {
+        this.toast('画布为空', 'warning')
+        return
+      }
+
+      if (!self.strokes || self.strokes.length === 0) {
+        this.toast('画布为空，无法打印', 'warning')
+        return
+      }
+
+      // 关闭工具栏
+      this.closeTools()
+
+      // 将Canvas转换为临时文件
+      try {
+        this.toast('正在生成图片...', 'loading')
+        
+        const { tempFilePath } = await wx.canvasToTempFilePath({
+          canvas: self.canvas,
+          fileType: 'png',
+          quality: 0.8
+        })
+
+        // 打印图片
+        await this.printImage(tempFilePath)
+      } catch (error) {
+        console.error('生成图片失败', error)
+        this.toast('生成图片失败', 'error')
+      }
+    },
+
+    // 断开蓝牙连接
+    async disconnectBluetooth() {
+      try {
+        await bleTool.disconnectBleDevice()
+        this.setData({ connectedDevice: null })
+        this.toast('已断开', 'success')
+      } catch (error) {
+        console.error('断开失败', error)
+      }
     },
   },
 })

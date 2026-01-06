@@ -29,7 +29,8 @@
     "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,
-    "packNpmManually": false,
+    "packNpmManually": true,
+    "urlCheck": false,
     "minifyWXSS": true,
     "minifyWXML": true,
     "localPlugins": false,
@@ -46,7 +47,7 @@
     "tabIndent": "insertSpaces",
     "tabSize": 2
   },
-  "libVersion": "trial",
+  "libVersion": "3.13.1",
   "packOptions": {
     "ignore": [],
     "include": []
