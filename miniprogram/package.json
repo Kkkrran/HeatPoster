@@ -1,0 +1,9 @@
+{
+  "name": "miniprogram",
+  "version": "1.0.0",
+  "description": "小程序 npm 依赖",
+  "dependencies": {
+    "tdesign-miniprogram": "^1.12.1"
+  }
+}
+
