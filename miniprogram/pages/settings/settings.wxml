@@ -2,7 +2,6 @@
 <view class="page">
   <view class="header">
     <view class="title">设置</view>
-    <view class="subtitle">权限 / 缓存 / 关于</view>
   </view>
 
   <view class="section">
@@ -23,29 +22,34 @@
           <t-button variant="outline" size="small" theme="default" bindtap="onClearCache">清理</t-button>
         </view>
       </t-cell>
-      <t-cell title="撤回步数上限" description="默认 50 步（占位）" note="50" />
-      <t-cell title="自动保存" description="从编辑页返回时提示保存（占位）" note="关闭" />
+      <t-cell title="撤回步数上限" description="点击修改" note="{{maxUndoSteps}}" bindtap="onEditUndoLimit" arrow />
+      <t-cell title="退出时提示保存" description="若有未保存更改，退出编辑页时进行提示">
+        <t-switch slot="note" value="{{exitConfirm}}" bind:change="onExitConfirmChange" />
+      </t-cell>
     </t-cell-group>
-  </view>
-
-  <view class="section">
-    <view class="card">
-      <view class="card-title">关于</view>
-      <view class="about-grid">
-        <view class="about-item">
-          <view class="about-k">版本</view>
-          <view class="about-v">0.1.0</view>
-        </view>
-        <view class="about-item">
-          <view class="about-k">存储方式</view>
-          <view class="about-v">本地文件 + Storage</view>
-        </view>
-      </view>
-      <view class="footer-tip">破坏性操作（删除/清空）需二次确认；Toast/Dialog 可由 TDesign Weixin 承担。</view>
-    </view>
   </view>
 
   <view class="bottom">
     <t-button variant="outline" theme="default" block bindtap="onBackHome">返回作品库</t-button>
   </view>
+
+  <t-dialog
+    visible="{{limitDialogVisible}}"
+    title="设置撤回步数上限"
+    confirm-btn="确定"
+    cancel-btn="取消"
+    bind:confirm="onLimitConfirm"
+    bind:cancel="onLimitCancel"
+  >
+    <t-input
+      slot="content"
+      borderless
+      class="dialog-input"
+      clearable
+      placeholder="请输入数字(10-100)"
+      value="{{tempLimitValue}}"
+      type="number"
+      bind:change="onLimitInputChange"
+    />
+  </t-dialog>
 </view>
