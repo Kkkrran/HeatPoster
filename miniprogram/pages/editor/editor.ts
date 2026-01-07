@@ -36,7 +36,7 @@ Component({
     backgroundImage: '',
 
     hasUnsavedChanges: false,
-    maxUndoSteps: 50,
+    maxUndoSteps: 10,
     // 打印相关
     blueList: [] as any[],
     connectedDevice: null as any,
@@ -67,7 +67,7 @@ Component({
 
   pageLifetimes: {
     show() {
-      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
       this.setData({ maxUndoSteps })
       this.updateExitConfirmState()
     }

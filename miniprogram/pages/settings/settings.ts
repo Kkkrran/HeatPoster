@@ -1,7 +1,7 @@
 Component({
   data: {
     exitConfirm: false,
-    maxUndoSteps: 50,
+    maxUndoSteps: 10,
     limitDialogVisible: false,
     tempLimitValue: '',
   },
@@ -11,7 +11,7 @@ Component({
       let exitConfirm = wx.getStorageSync('editor_exit_confirm')
       if (exitConfirm === '') exitConfirm = true // 默认为开启
       
-      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
       this.setData({ exitConfirm, maxUndoSteps })
     }
   },
@@ -40,8 +40,8 @@ Component({
 
     onLimitConfirm() {
       const val = parseInt(this.data.tempLimitValue, 10)
-      if (isNaN(val) || val < 10 || val > 100) {
-        wx.showToast({ title: '请输入10-100之间的整数', icon: 'none' })
+      if (isNaN(val) || val < 5 || val > 20) {
+        wx.showToast({ title: '请输入5-20之间的整数', icon: 'none' })
         return
       }
       this.setData({ 

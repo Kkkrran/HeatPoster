@@ -46,7 +46,7 @@
       borderless
       class="dialog-input"
       clearable
-      placeholder="请输入数字(10-100)"
+      placeholder="请输入数字(5-20)"
       value="{{tempLimitValue}}"
       type="number"
       bind:change="onLimitInputChange"
