@@ -4,7 +4,7 @@ App<IAppOption>({
   onLaunch() {
     if (wx.cloud) {
       wx.cloud.init({
-        env: 'cloud1-8gonkf4q94e7505c',
+        env: 'art-9g2yt6t89a45335b',
         traceUser: true,
       })
     }

@@ -92,6 +92,23 @@ page {
   padding: 16rpx 32rpx 32rpx;
 }
 
+/* 云存储图片样式 */
+.cloud-image-container {
+  margin-top: 24rpx;
+  padding: 16rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cloud-image {
+  max-width: 100%;
+  max-height: 600rpx;
+  border-radius: 8rpx;
+}
+
 /* 蓝牙相关样式 */
 .connection-status {
   margin-top: 16rpx;

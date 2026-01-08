@@ -26,26 +26,70 @@ Component({
     connectedDevice: null,
     isScanning: false,
     deviceListVisible: false,
+    cloudImageUrl: '', // 云存储图片的临时路径
+    selectedBgFileName: '', // 当前选择的背景文件名
   },
 
-  attached() {
-    const self = this as any
-    const exitConfirm = wx.getStorageSync(STORAGE_KEYS.EXIT_CONFIRM)
-    const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 50
-    
-    // 加载已保存的打印机连接信息
-    const savedDevice = wx.getStorageSync('connected_printer_device')
-    if (savedDevice) {
-      self.setData({ connectedDevice: savedDevice })
+  lifetimes: {
+    attached() {
+      const self = this as any
+      let exitConfirm = wx.getStorageSync(STORAGE_KEYS.EXIT_CONFIRM)
+      if (exitConfirm === '') exitConfirm = true // 默认为开启
+      
+      const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 50
+      
+      // 加载已保存的打印机连接信息
+      const savedDevice = wx.getStorageSync('connected_printer_device')
+      if (savedDevice) {
+        self.setData({ connectedDevice: savedDevice })
+      }
+      
+      // 加载选择的背景
+      self.loadSelectedBackground()
+      
+      self.setData({ 
+        exitConfirm, 
+        maxUndoSteps 
+      })
     }
-    
-    self.setData({ 
-      exitConfirm: exitConfirm !== '' ? exitConfirm : true, 
-      maxUndoSteps 
-    })
+  },
+
+  pageLifetimes: {
+    show() {
+      // 每次页面显示时都重新加载所有设置（从背景选择页返回时会更新）
+      ;(this as any).refreshAllSettings()
+    }
   },
 
   methods: {
+    loadSelectedBackground() {
+      const self = this as any
+      const selectedBg = wx.getStorageSync('selected_background')
+      if (selectedBg && selectedBg.name) {
+        // 从 name 字段生成文件名（name 是 "bg1" 格式，需要加上 ".png"）
+        const fileName = `${selectedBg.name}.png`
+        self.setData({ selectedBgFileName: fileName })
+      } else {
+        self.setData({ selectedBgFileName: '' })
+      }
+    },
+
+    refreshAllSettings() {
+      const self = this as any
+      // 重新加载退出确认设置
+      let exitConfirm = wx.getStorageSync('editor_exit_confirm')
+      if (exitConfirm === '') exitConfirm = true // 默认为开启
+
+      // 重新加载撤销步数限制设置
+      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+
+      // 重新加载选择的背景
+      self.loadSelectedBackground()
+
+      // 更新所有设置到页面数据
+      self.setData({ exitConfirm, maxUndoSteps })
+    },
+
     onExitConfirmChange(e: any) {
       const val = e.detail.value
       ;(this as any).setData({ exitConfirm: val })
@@ -124,6 +168,31 @@ Component({
 
     onBackHome() {
       wx.navigateBack({ delta: 1 })
+    },
+
+    async onLoadCloudImage() {
+      const self = this as any
+      const fileID = 'cloud://art-9g2yt6t89a45335b.6172-art-9g2yt6t89a45335b-1393918820/backgrounds/bg2.png'
+      
+      try {
+        wx.showLoading({ title: '读取中...' })
+        const downloadRes = await wx.cloud.downloadFile({ fileID })
+        self.setData({ cloudImageUrl: downloadRes.tempFilePath })
+        wx.hideLoading()
+        wx.showToast({ title: '读取成功', icon: 'success' })
+      } catch (err: any) {
+        console.error('读取云存储失败', err)
+        wx.hideLoading()
+        wx.showToast({ title: '读取失败', icon: 'none' })
+      }
+    },
+
+    onGoBgSelect() {
+      wx.navigateTo({ url: '/pages/bgselect/bgselect' })
+    },
+
+    onGoAlbum() {
+      wx.navigateTo({ url: '/pages/album/album' })
     },
 
     // --- 蓝牙核心逻辑 ---

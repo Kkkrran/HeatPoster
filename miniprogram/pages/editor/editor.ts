@@ -30,7 +30,7 @@ Page({
     artworkId: '',
 
     hasUnsavedChanges: false,
-    maxUndoSteps: 50,
+    maxUndoSteps: 10,
     // 打印相关
     connectedDevice: null as any,
     printCanvasCtx: null as any,

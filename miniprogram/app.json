@@ -4,6 +4,8 @@
     "pages/index/index",
     "pages/editor/editor",
     "pages/settings/settings",
+    "pages/bgselect/bgselect",
+    "pages/album/album",
     "pages/logs/logs"
   ],
   "window": {
