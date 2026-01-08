@@ -751,33 +751,7 @@ Page({
     })
   },
 
-  // ========== 打印功能 ==========
-
-  // 检查打印机连接状态
-  checkPrinterConnection() {
-    const savedDevice = wx.getStorageSync('connected_printer_device')
-    if (savedDevice) {
-      this.setData({ connectedDevice: savedDevice })
-    } else {
-      this.setData({ connectedDevice: null })
-    }
-  },
-
-  // 初始化打印Canvas
-  initPrintCanvas() {
-    try {
-      // 使用 createCanvasContext 创建传统 Canvas 上下文（与 SDK 示例保持一致）
-      const ctx = wx.createCanvasContext('printCanvasWx', this as any)
-      if (ctx) {
-        this.setData({ printCanvasCtx: ctx })
-        console.log('打印Canvas初始化成功')
-      }
-    } catch (error) {
-      console.error('打印Canvas初始化失败:', error)
-    }
-  },
-
-  /**
+    /**
    * 合成背景图与热力图，返回合并后的临时文件路径
    */
   async getComposedImagePath(): Promise<string> {
@@ -855,6 +829,32 @@ Page({
         fail: reject
       })
     })
+  },
+
+  // ========== 打印功能 ==========
+
+  // 检查打印机连接状态
+  checkPrinterConnection() {
+    const savedDevice = wx.getStorageSync('connected_printer_device')
+    if (savedDevice) {
+      this.setData({ connectedDevice: savedDevice })
+    } else {
+      this.setData({ connectedDevice: null })
+    }
+  },
+
+  // 初始化打印Canvas
+  initPrintCanvas() {
+    try {
+      // 使用 createCanvasContext 创建传统 Canvas 上下文（与 SDK 示例保持一致）
+      const ctx = wx.createCanvasContext('printCanvasWx', this as any)
+      if (ctx) {
+        this.setData({ printCanvasCtx: ctx })
+        console.log('打印Canvas初始化成功')
+      }
+    } catch (error) {
+      console.error('打印Canvas初始化失败:', error)
+    }
   },
 
   // 点击打印按钮 - 显示参数设置弹窗
