@@ -19,13 +19,15 @@
     "lib": ["ES2020"],
     "typeRoots": [
       "./typings"
-    ]
+    ],
+    "noEmit": true
   },
   "include": [
     "./**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "miniprogram/SUPVANAPIT50PRO/**/*"
   ],
   "paths": {
     "tdesign-miniprogram/*":["./miniprogram/miniprogram_npm/tdesign-miniprogram/*"]

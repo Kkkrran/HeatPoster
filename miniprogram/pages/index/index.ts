@@ -66,25 +66,26 @@ Component({
       { label: '重命名', value: 'rename' },
       { label: '删除', value: 'delete', theme: 'danger' },
       { label: '导出到相册', value: 'export' },
-      { label: '打印', value: 'print' },
     ],
   },
 
   lifetimes: {
     attached() {
+      const self = this as any
       ensureCloud()
-      this.refresh()
+      self.refresh()
     },
   },
 
   methods: {
     async refresh() {
+      const self = this as any
       if (!wx.cloud) {
         wx.showToast({ title: '未检测到云开发能力', icon: 'none' })
         return
       }
 
-      this.setData({ loading: true })
+      self.setData({ loading: true })
       try {
         const res = await wx.cloud.callFunction({
           name: FUNCTION_ARTWORKS,
@@ -96,12 +97,12 @@ Component({
 
         const docs = (result.data || []) as unknown as ArtworkDoc[]
         const artworks = docs.map(toArtwork)
-        this.setData({ artworks })
+        self.setData({ artworks })
       } catch (err) {
         console.error('load artworks failed', err)
         wx.showToast({ title: '加载作品失败', icon: 'none' })
       } finally {
-        this.setData({ loading: false })
+        self.setData({ loading: false })
       }
     },
 
@@ -115,36 +116,36 @@ Component({
     },
 
     onMore(e: WechatMiniprogram.TouchEvent) {
+      const self = this as any
       const id = (e.currentTarget.dataset as any).id as string
-      this.setData({ moreVisible: true, currentArtworkId: id })
+      self.setData({ moreVisible: true, currentArtworkId: id })
     },
 
     onCloseMore() {
-      this.setData({ moreVisible: false })
+      const self = this as any
+      self.setData({ moreVisible: false })
     },
 
     onMoreSelect(e: any) {
+      const self = this as any
       console.log('onMoreSelect', e)
       // TDesign ActionSheet selected 事件 detail 结构通常为 { selected: Item, index: number }
       const { selected } = e.detail || {}
       const value = selected?.value
 
-      const id = this.data.currentArtworkId
-      this.setData({ moreVisible: false })
+      const id = self.data.currentArtworkId
+      self.setData({ moreVisible: false })
       if (!id) return
 
       switch (value) {
         case 'rename':
-          this.renameArtwork(id)
+          self.renameArtwork(id)
           break
         case 'delete':
-          this.deleteArtwork(id)
+          self.deleteArtwork(id)
           break
         case 'export':
-          this.exportArtworkToAlbum(id)
-          break
-        case 'print':
-          this.printArtwork(id)
+          self.exportArtworkToAlbum(id)
           break
         default:
           // 如果获取不到 value，尝试直接打印提示，便于调试
@@ -155,7 +156,8 @@ Component({
     },
 
     async renameArtwork(id: string) {
-      const current = this.data.artworks.find(a => a.id === id)
+      const self = this as any
+      const current = self.data.artworks.find((a: Artwork) => a.id === id)
       const defaultValue = current?.name || ''
 
       wx.showModal({
@@ -179,7 +181,7 @@ Component({
             const result = (cf.result || {}) as any
             if (!result.ok) throw new Error(result.error || 'rename failed')
             wx.showToast({ title: '已重命名', icon: 'success' })
-            this.refresh()
+            self.refresh()
           } catch (err) {
             console.error('rename failed', err)
             wx.showToast({ title: '重命名失败', icon: 'none' })
@@ -189,6 +191,7 @@ Component({
     },
 
     async deleteArtwork(id: string) {
+      const self = this as any
       wx.showModal({
         title: '确认删除？',
         content: '删除后将从作品库移除（可在后台恢复数据）。',
@@ -205,7 +208,7 @@ Component({
             if (!result.ok) throw new Error(result.error || 'delete failed')
 
             wx.showToast({ title: '已删除', icon: 'success' })
-            this.refresh()
+            self.refresh()
           } catch (err) {
             console.error('delete failed', err)
             wx.showToast({ title: '删除失败', icon: 'none' })
@@ -215,7 +218,8 @@ Component({
     },
 
     async exportArtworkToAlbum(id: string) {
-      const item = this.data.artworks.find(a => a.id === id)
+      const self = this as any
+      const item = self.data.artworks.find((a: Artwork) => a.id === id)
       const fileID = item?.exportFileId || item?.thumbnail
       if (!fileID) {
         wx.showToast({ title: '暂无可导出的图片', icon: 'none' })
@@ -259,37 +263,5 @@ Component({
       wx.navigateTo({ url: '/pages/settings/settings' })
     },
 
-    async printArtwork(id: string) {
-      const item = this.data.artworks.find(a => a.id === id)
-      if (!item) {
-        wx.showToast({ title: '作品不存在', icon: 'none' })
-        return
-      }
-
-      // 如果有导出图，使用导出图；否则使用缩略图
-      const fileID = item.exportFileId || item.thumbnail
-      if (!fileID) {
-        wx.showToast({ title: '暂无可打印的图片', icon: 'none' })
-        return
-      }
-
-      try {
-        wx.showLoading({ title: '准备打印...' })
-        
-        // 下载图片到本地
-        const downloadRes = await wx.cloud.downloadFile({ fileID })
-        const tempFilePath = downloadRes.tempFilePath
-
-        // 跳转到编辑页面并传递打印参数
-        wx.navigateTo({
-          url: `/pages/editor/editor?id=${encodeURIComponent(id)}&print=true&imagePath=${encodeURIComponent(tempFilePath)}`
-        })
-      } catch (err: any) {
-        console.error('打印准备失败', err)
-        wx.showToast({ title: '准备打印失败', icon: 'none' })
-      } finally {
-        wx.hideLoading()
-      }
-    },
   },
 })
