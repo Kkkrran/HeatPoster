@@ -16,12 +16,20 @@
   </view>
 
   <view class="canvas-wrap">
-    <view class="canvas-container">
-      <!-- 背景图 -->
+    <view class="canvas-container" style="{{canvasContainerStyle}}">
+      <!-- 常驻背景图（最底层） -->
+      <image 
+        wx:if="{{permanentBackgroundImage}}" 
+        src="{{permanentBackgroundImage}}" 
+        class="canvas-bg permanent-bg" 
+        mode="scaleToFill"
+      ></image>
+      
+      <!-- 临时背景图（中间层） -->
       <image 
         wx:if="{{backgroundImage}}" 
         src="{{backgroundImage}}" 
-        class="canvas-bg" 
+        class="canvas-bg temp-bg" 
         mode="scaleToFill"
       ></image>
 
@@ -29,7 +37,7 @@
       <canvas 
         type="2d" 
         id="paintCanvas" 
-        class="canvas {{backgroundImage ? 'transparent' : ''}}"
+        class="canvas {{(backgroundImage || permanentBackgroundImage) ? 'transparent' : ''}}"
         hidden="{{isCanvasHidden}}"
         bindtouchstart="onTouchStart"
         bindtouchmove="onTouchMove"

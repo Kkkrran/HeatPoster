@@ -220,7 +220,8 @@ Component({
     async exportArtworkToAlbum(id: string) {
       const self = this as any
       const item = self.data.artworks.find((a: Artwork) => a.id === id)
-      const fileID = item?.exportFileId || item?.thumbnail
+      // 优先使用thumbnailFileId（即thumbnail字段），因为它是包含常驻背景的完整图片
+      const fileID = item?.thumbnail || item?.exportFileId
       if (!fileID) {
         wx.showToast({ title: '暂无可导出的图片', icon: 'none' })
         return

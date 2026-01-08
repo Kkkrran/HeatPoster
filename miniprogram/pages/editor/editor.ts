@@ -26,7 +26,10 @@ Page({
     openid: '',
     snapshotUrl: '',
     isCanvasHidden: false,
-    backgroundImage: '',
+    backgroundImage: '', // 临时背景图
+    permanentBackgroundImage: '', // 常驻背景图
+    permanentBackgroundAspectRatio: undefined as number | undefined, // 常驻背景的宽高比
+    canvasContainerStyle: '', // canvas容器的动态样式
     artworkId: '',
 
     hasUnsavedChanges: false,
@@ -46,7 +49,7 @@ Page({
     printGap: 3,        // 间隙（mm）
   },
 
-  onLoad(options: any) {
+  async onLoad(options: any) {
     // 初始化实例变量
     Object.assign(this, {
       strokes: [], // ... existing ...
@@ -55,7 +58,10 @@ Page({
       needsRender: false,
       renderLoopId: 0
     })
-    this.initCanvas()
+    // 先加载常驻背景，然后再初始化画布（这样可以根据常驻背景的比例调整画布）
+    await this.loadPermanentBackground()
+    // 等待画布初始化完成
+    await this.initCanvas()
     this.initPrintCanvas()
     this.checkPrinterConnection()
     this.loadPrintSettings() // 加载保存的打印参数
@@ -63,6 +69,7 @@ Page({
     
     if (options && options.id) {
       this.setData({ artworkId: options.id })
+      // 画布已经初始化完成，现在可以安全地加载作品
       this.loadArtwork(options.id)
     }
   },
@@ -80,6 +87,8 @@ Page({
     this.updateExitConfirmState()
     // 每次显示页面时检查打印机连接状态
     this.checkPrinterConnection()
+    // 重新加载常驻背景（可能用户在设置页面修改了）
+    this.loadPermanentBackground()
   },
 
   updateExitConfirmState() {
@@ -119,6 +128,54 @@ Page({
     }
   },
 
+  // 加载常驻背景
+  async loadPermanentBackground() {
+    try {
+      const selectedBg = wx.getStorageSync('selected_background')
+      if (selectedBg && selectedBg.tempFilePath) {
+        // 如果有保存的常驻背景，加载它
+        this.setData({ 
+          permanentBackgroundImage: selectedBg.tempFilePath 
+        })
+        
+        // 如果有宽高比信息，也保存下来
+        if (selectedBg.aspectRatio) {
+          this.setData({ 
+            permanentBackgroundAspectRatio: selectedBg.aspectRatio 
+          })
+        } else {
+          // 如果没有宽高比信息，尝试获取
+          try {
+            const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
+              wx.getImageInfo({
+                src: selectedBg.tempFilePath,
+                success: resolve,
+                fail: reject,
+              })
+            })
+            const aspectRatio = imageInfo.width / imageInfo.height
+            this.setData({ permanentBackgroundAspectRatio: aspectRatio })
+            // 更新存储中的宽高比信息
+            wx.setStorageSync('selected_background', {
+              ...selectedBg,
+              aspectRatio
+            })
+          } catch (err) {
+            console.warn('获取常驻背景图片信息失败', err)
+          }
+        }
+      } else {
+        // 没有常驻背景，清空
+        this.setData({ 
+          permanentBackgroundImage: '',
+          permanentBackgroundAspectRatio: undefined
+        })
+      }
+    } catch (err) {
+      console.error('加载常驻背景失败', err)
+    }
+  },
+
   toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
     const toast = this.selectComponent('#t-toast') as any
     if (!toast || typeof toast.show !== 'function') return
@@ -130,36 +187,115 @@ Page({
     })
   },
 
-  initCanvas() {
-    const query = this.createSelectorQuery()
-    query.select('#paintCanvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res[0] || !res[0].node) return
-        const canvas = res[0].node
-        const ctx = canvas.getContext('2d')
-        // @ts-ignore
-        const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
-        
-        const self = this as any
-        self.canvas = canvas
-        self.ctx = ctx
-        self.dpr = dpr
-        self.width = res[0].width
-        self.height = res[0].height
+  initCanvas(): Promise<void> {
+    return new Promise((resolve) => {
+      const query = this.createSelectorQuery()
+      // 先查询canvas-wrap容器，获取可用空间
+      query.select('.canvas-wrap')
+        .boundingClientRect()
+        .exec((wrapRes) => {
+          const wrapInfo = wrapRes[0]
+          if (!wrapInfo) {
+            resolve()
+            return
+          }
 
-        canvas.width = res[0].width * dpr
-        canvas.height = res[0].height * dpr
-        ctx.scale(dpr, dpr)
+          // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
+          let canvasContainerStyle = ''
+          if (this.data.permanentBackgroundAspectRatio) {
+            const aspectRatio = this.data.permanentBackgroundAspectRatio
+            const maxWidth = wrapInfo.width - 48 // 减去左右padding (24rpx * 2)
+            const maxHeight = wrapInfo.height - 24 // 减去底部padding
+            
+            // 计算适合的尺寸（保持比例，尽量填满容器）
+            let targetWidth = maxHeight * aspectRatio
+            let targetHeight = maxHeight
+            
+            // 如果宽度超出容器，则按宽度缩放
+            if (targetWidth > maxWidth) {
+              targetWidth = maxWidth
+              targetHeight = maxWidth / aspectRatio
+            }
+            
+            // 设置canvas容器的样式（使用rpx单位）
+            const systemInfo = wx.getSystemInfoSync()
+            const rpxRatio = systemInfo.windowWidth / 750
+            const targetWidthRpx = targetWidth / rpxRatio
+            const targetHeightRpx = targetHeight / rpxRatio
+            canvasContainerStyle = `width: ${targetWidthRpx}rpx; height: ${targetHeightRpx}rpx; margin: 0 auto;`
+          }
 
-        // 初始化离屏 Canvas
-        // @ts-ignore
-        self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
-        self.memCtx = self.memCanvas.getContext('2d')
+          this.setData({ canvasContainerStyle })
 
-        this.initPalette()
-        this.startRenderLoop()
-      })
+          // 查询canvas元素
+          const canvasQuery = this.createSelectorQuery()
+          canvasQuery.select('#paintCanvas')
+            .fields({ node: true, size: true })
+            .exec((res) => {
+              if (!res[0] || !res[0].node) {
+                resolve()
+                return
+              }
+              const canvas = res[0].node
+              const ctx = canvas.getContext('2d')
+              // @ts-ignore
+              const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
+              
+              const self = this as any
+              self.canvas = canvas
+              self.ctx = ctx
+              self.dpr = dpr
+              
+              // 如果设置了容器样式，需要等待下一帧再获取实际尺寸
+              if (canvasContainerStyle) {
+                setTimeout(() => {
+                  const sizeQuery = this.createSelectorQuery()
+                  sizeQuery.select('#paintCanvas')
+                    .boundingClientRect()
+                    .exec((sizeRes) => {
+                      if (!sizeRes[0]) {
+                        resolve()
+                        return
+                      }
+                      const rect = sizeRes[0]
+                      self.width = rect.width
+                      self.height = rect.height
+
+                      canvas.width = rect.width * dpr
+                      canvas.height = rect.height * dpr
+                      ctx.scale(dpr, dpr)
+
+                      // 初始化离屏 Canvas
+                      // @ts-ignore
+                      self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
+                      self.memCtx = self.memCanvas.getContext('2d')
+
+                      this.initPalette()
+                      this.startRenderLoop()
+                      resolve()
+                    })
+                }, 100)
+              } else {
+                // 没有设置容器样式，使用默认尺寸
+                self.width = res[0].width
+                self.height = res[0].height
+
+                canvas.width = res[0].width * dpr
+                canvas.height = res[0].height * dpr
+                ctx.scale(dpr, dpr)
+
+                // 初始化离屏 Canvas
+                // @ts-ignore
+                self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
+                self.memCtx = self.memCanvas.getContext('2d')
+
+                this.initPalette()
+                this.startRenderLoop()
+                resolve()
+              }
+            })
+        })
+    })
   },
 
   initPalette() {
@@ -435,26 +571,35 @@ Page({
         filePath: pointsPath
       })
       
-      const { tempFilePath } = await wx.canvasToTempFilePath({
-        canvas: self.canvas,
-        fileType: 'png',
-        quality: 0.8
-      })
+      // 使用getComposedImagePath生成包含常驻背景和临时背景的合成图
+      const composedImagePath = await this.getComposedImagePath()
       
       const { fileID: thumbnailFileId } = await wx.cloud.uploadFile({
         cloudPath: `artworks/${openid}/${Date.now()}_thumb.png`,
-        filePath: tempFilePath
+        filePath: composedImagePath
       })
       
       let id = this.data.artworkId
       if (!id) {
+        // 创建新作品时，如果有常驻背景，使用常驻背景的比例
+        let width = self.width
+        let height = self.height
+        
+        if (this.data.permanentBackgroundAspectRatio) {
+          // 根据常驻背景的比例调整画布尺寸
+          // 保持当前画布的高度，根据比例调整宽度
+          const containerHeight = self.height
+          width = containerHeight * this.data.permanentBackgroundAspectRatio
+          height = containerHeight
+        }
+        
          const res = await wx.cloud.callFunction({
            name: 'editor',
            data: { 
              action: 'create',
              name: '未命名作品',
-             width: self.width,
-             height: self.height
+             width: width,
+             height: height
            }
          })
          // @ts-ignore
@@ -586,7 +731,23 @@ Page({
     const offscreenCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
     const offscreenCtx = offscreenCanvas.getContext('2d')
 
-    // 2. 如果有背景图，先画背景
+    // 2. 先绘制常驻背景（最底层）
+    if (this.data.permanentBackgroundImage) {
+      // @ts-ignore - 离屏 Canvas 的 createImage 方法
+      const permanentBgImg = offscreenCanvas.createImage()
+      permanentBgImg.src = this.data.permanentBackgroundImage
+      await new Promise((resolve) => {
+        permanentBgImg.onload = resolve
+        permanentBgImg.onerror = resolve // 容错处理
+      })
+      offscreenCtx.drawImage(permanentBgImg, 0, 0, width, height)
+    } else {
+      // 无常驻背景则填充白色底
+      offscreenCtx.fillStyle = '#ffffff'
+      offscreenCtx.fillRect(0, 0, width, height)
+    }
+
+    // 3. 再绘制临时背景（中间层，如果有的话）
     if (this.data.backgroundImage) {
       // @ts-ignore - 离屏 Canvas 的 createImage 方法
       const bgImg = offscreenCanvas.createImage()
@@ -596,13 +757,9 @@ Page({
         bgImg.onerror = resolve // 容错处理
       })
       offscreenCtx.drawImage(bgImg, 0, 0, width, height)
-    } else {
-      // 无背景图则填充白色底
-      offscreenCtx.fillStyle = '#ffffff'
-      offscreenCtx.fillRect(0, 0, width, height)
     }
 
-    // 3. 获取当前热力图的 ImageData 并处理颜色映射
+    // 4. 获取当前热力图的 ImageData 并处理颜色映射
     if (self.memCtx && self.palette) {
       const heatmapData = self.memCtx.getImageData(0, 0, width, height)
       const pixels = heatmapData.data
@@ -619,7 +776,7 @@ Page({
         }
       }
 
-      // 4. 将热力图绘制到合成画布上
+      // 5. 将热力图绘制到合成画布上
       // @ts-ignore
       const tempHeatmapCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
       const tempHeatmapCtx = tempHeatmapCanvas.getContext('2d')
@@ -628,7 +785,7 @@ Page({
       offscreenCtx.drawImage(tempHeatmapCanvas, 0, 0, width, height)
     }
 
-    // 5. 导出合成后的图片
+    // 6. 导出合成后的图片
     return new Promise((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas: offscreenCanvas,

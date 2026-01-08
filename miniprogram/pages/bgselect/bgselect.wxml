@@ -6,7 +6,16 @@
   </view>
 
   <scroll-view class="content" scroll-y>
-    <view class="grid" wx:if="{{backgrounds.length > 0}}">
+    <view class="grid">
+      <!-- 无背景选项 -->
+      <view class="grid-item no-bg-item" bindtap="onSelectNoBg">
+        <view class="bg-image-wrapper no-bg-wrapper">
+          <view class="no-bg-icon">无背景</view>
+        </view>
+        <view class="bg-label">无背景</view>
+      </view>
+      
+      <!-- 背景图片选项 -->
       <view class="grid-item" wx:for="{{backgrounds}}" wx:key="index" bindtap="onSelectBg" data-index="{{index}}">
         <view class="bg-image-wrapper" style="{{item.aspectRatio ? 'padding-bottom: ' + (100 / item.aspectRatio) + '%' : 'padding-bottom: 100%'}}">
           <image class="bg-image" src="{{item.tempFilePath}}" mode="aspectFit"></image>
@@ -14,7 +23,7 @@
         <view class="bg-label">{{item.name}}</view>
       </view>
     </view>
-    <view class="empty-wrap" wx:else>
+    <view class="empty-wrap" wx:if="{{backgrounds.length === 0}}">
       <t-empty description="暂无可用背景" />
     </view>
   </scroll-view>

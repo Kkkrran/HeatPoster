@@ -96,6 +96,7 @@ Component({
         name: bg.name,
         fileID: bg.fileID,
         tempFilePath: bg.tempFilePath,
+        aspectRatio: bg.aspectRatio, // 保存宽高比
       })
 
       // 显示选择成功的提示
@@ -103,6 +104,28 @@ Component({
         title: `已选择 ${bg.name}`,
         icon: 'success',
         duration: 1500, // 稍微延长显示时间，让用户看到提示
+      })
+
+      // 延迟一点时间后自动返回设置页面
+      setTimeout(() => {
+        wx.navigateBack({
+          delta: 1,
+          success: () => {
+            // 返回成功后，settings页面会通过pageLifetimes.show()自动刷新
+          }
+        })
+      }, 1500)
+    },
+
+    onSelectNoBg() {
+      // 清除常驻背景
+      wx.removeStorageSync('selected_background')
+
+      // 显示选择成功的提示
+      wx.showToast({
+        title: '已选择无背景',
+        icon: 'success',
+        duration: 1500,
       })
 
       // 延迟一点时间后自动返回设置页面
