@@ -61,6 +61,22 @@
         <text class="status-label">已连接设备:</text>
         <text class="status-value">{{connectedDevice.name || connectedDevice.deviceId}}</text>
       </view>
+      <!-- 设备列表 -->
+      <view class="device-list" wx:if="{{blueList.length > 0 || isScanning}}">
+        <view wx:if="{{isScanning && blueList.length === 0}}" class="no-devices">
+          正在搜索蓝牙设备...
+        </view>
+        <view wx:for="{{blueList}}" wx:key="deviceId" class="device-item" bindtap="clickConnectBleDevice" data-device="{{item}}">
+          <view class="device-info">
+            <view class="device-name">{{item.name || '未知设备'}}</view>
+            <view class="device-id">ID: {{item.deviceId}}</view>
+          </view>
+          <view class="device-status">
+            <t-icon name="check-circle" wx:if="{{connectedDevice && connectedDevice.deviceId === item.deviceId}}" size="24" color="#07c160" />
+            <t-icon name="chevron-right" wx:else size="20" color="#86909c" />
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 
@@ -87,44 +103,5 @@
       bind:change="onLimitInputChange"
     />
   </t-dialog>
-
-  <!-- 蓝牙设备列表弹窗 -->
-  <t-popup visible="{{deviceListVisible}}" placement="bottom" bind:visible-change="onDeviceListVisibleChange">
-    <view class="sheet">
-      <view class="grabber"></view>
-      <view class="sheet-header">
-        <view>
-          <view class="sheet-title">选择蓝牙打印机</view>
-          <view class="sheet-subtitle">
-            <text wx:if="{{isScanning}}">正在搜索蓝牙设备...</text>
-            <text wx:elif="{{blueList.length > 0}}">找到 {{blueList.length}} 个设备</text>
-            <text wx:else>未找到设备</text>
-          </view>
-        </view>
-        <t-button theme="primary" variant="base" size="small" bindtap="clickStartScanBleDevice" disabled="{{isScanning}}">
-          {{isScanning ? '搜索中' : '重新搜索'}}
-        </t-button>
-      </view>
-      <view class="device-list">
-        <view wx:if="{{blueList.length === 0}}" class="no-devices">
-          {{isScanning ? '正在搜索蓝牙设备...' : '未找到蓝牙设备，请点击"重新搜索"重试'}}
-        </view>
-        <view wx:for="{{blueList}}" wx:key="deviceId" class="device-item" bindtap="clickConnectBleDevice" data-device="{{item}}">
-          <view class="device-info">
-            <view class="device-name">{{item.name || '未知设备'}}</view>
-            <view class="device-id">ID: {{item.deviceId}}</view>
-          </view>
-          <view class="device-status">
-            <t-icon name="check-circle" wx:if="{{connectedDevice && connectedDevice.deviceId === item.deviceId}}" size="24" color="#07c160" />
-            <t-icon name="chevron-right" wx:else size="20" color="#86909c" />
-          </view>
-        </view>
-      </view>
-      <view class="popup-footer">
-        <t-button wx:if="{{isScanning}}" theme="default" variant="outline" block bindtap="clickStopScanBleDevices">停止搜索</t-button>
-        <t-button wx:else theme="default" variant="outline" block bindtap="onCloseDeviceList">关闭</t-button>
-      </view>
-    </view>
-  </t-popup>
 </view>
 

@@ -25,7 +25,6 @@ Component({
     blueList: [],
     connectedDevice: null,
     isScanning: false,
-    deviceListVisible: false,
     cloudImageUrl: '', // 云存储图片的临时路径
     selectedBgFileName: '', // 当前选择的背景文件名
   },
@@ -214,8 +213,7 @@ Component({
         self.data.blueList = []
         self.setData({ 
           blueList: [],
-          isScanning: true,
-          deviceListVisible: true 
+          isScanning: true
         })
 
         // 3. 调用SDK扫描蓝牙设备
@@ -284,8 +282,7 @@ Component({
         console.log('连接蓝牙设备成功', res)
         wx.hideLoading()
         self.setData({ 
-          connectedDevice: device,
-          deviceListVisible: false 
+          connectedDevice: device
         })
         // 保存连接信息到本地存储，供 editor 页面使用
         wx.setStorageSync('connected_printer_device', device)
@@ -330,23 +327,6 @@ Component({
       })
     },
 
-    onDeviceListVisibleChange(e: any) {
-      const self = this as any
-      // 当弹窗关闭时，如果正在搜索则停止搜索
-      if (!e.detail.visible && self.data.isScanning) {
-        self.clickStopScanBleDevices()
-      }
-      self.setData({ deviceListVisible: e.detail.visible })
-    },
-
-    onCloseDeviceList() {
-      const self = this as any
-      // 如果正在搜索，先停止搜索
-      if (self.data.isScanning) {
-        self.clickStopScanBleDevices()
-      }
-      self.setData({ deviceListVisible: false })
-    },
 
     async requestBluetoothPermissions(): Promise<void> {
       const self = this as any
