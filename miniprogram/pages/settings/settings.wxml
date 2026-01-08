@@ -30,6 +30,7 @@
 
   <view class="section">
     <t-cell-group>
+      <t-cell title="常驻背景选择" description="选择应用常驻背景图片" bindtap="onGoBgSelect" arrow />
       <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
         <view slot="note">
           <t-button variant="outline" size="small" theme="default" bindtap="onClearCache">清理</t-button>

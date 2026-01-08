@@ -1,0 +1,22 @@
+<!-- 背景选择页 -->
+<view class="page">
+  <view class="header">
+    <view class="title">常驻背景选择</view>
+    <view class="subtitle">选择您喜欢的背景图片</view>
+  </view>
+
+  <scroll-view class="content" scroll-y>
+    <view class="grid" wx:if="{{backgrounds.length > 0}}">
+      <view class="grid-item" wx:for="{{backgrounds}}" wx:key="index" bindtap="onSelectBg" data-index="{{index}}">
+        <view class="bg-image-wrapper" style="{{item.aspectRatio ? 'padding-bottom: ' + (100 / item.aspectRatio) + '%' : 'padding-bottom: 100%'}}">
+          <image class="bg-image" src="{{item.tempFilePath}}" mode="aspectFit"></image>
+        </view>
+        <view class="bg-label">{{item.name}}</view>
+      </view>
+    </view>
+    <view class="empty-wrap" wx:else>
+      <t-empty description="暂无可用背景" />
+    </view>
+  </scroll-view>
+</view>
+

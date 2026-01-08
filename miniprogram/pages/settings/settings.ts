@@ -127,5 +127,9 @@ Component({
         wx.showToast({ title: '读取失败', icon: 'none' })
       }
     },
+
+    onGoBgSelect() {
+      wx.navigateTo({ url: '/pages/bgselect/bgselect' })
+    },
   },
 })
