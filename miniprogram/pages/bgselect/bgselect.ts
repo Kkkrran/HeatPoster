@@ -22,7 +22,7 @@ Component({
     async loadBackgrounds() {
       this.setData({ loading: true })
       
-      const basePath = 'cloud://cloud1-8gonkf4q94e7505c.636c-cloud1-8gonkf4q94e7505c-1393918820/backgrounds/'
+      const basePath = 'cloud://art-9g2yt6t89a45335b.6172-art-9g2yt6t89a45335b-1393918820/backgrounds/'
       const backgrounds: BackgroundItem[] = []
 
       // 尝试加载 bg1 到 bg10

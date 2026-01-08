@@ -113,7 +113,7 @@ Component({
     },
 
     async onLoadCloudImage() {
-      const fileID = 'cloud://cloud1-8gonkf4q94e7505c.636c-cloud1-8gonkf4q94e7505c-1393918820/backgrounds/bg1.png'
+      const fileID = 'cloud://art-9g2yt6t89a45335b.6172-art-9g2yt6t89a45335b-1393918820/backgrounds/bg2.png'
       
       try {
         wx.showLoading({ title: '读取中...' })

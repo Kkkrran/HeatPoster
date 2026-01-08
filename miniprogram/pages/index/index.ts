@@ -22,7 +22,7 @@ type ArtworkDoc = {
   isDeleted?: boolean
 }
 
-const ENV_ID = 'cloud1-8gonkf4q94e7505c'
+const ENV_ID = 'art-9g2yt6t89a45335b'
 const FUNCTION_ARTWORKS = 'artworks'
 
 const formatDate = (ts: number) => {

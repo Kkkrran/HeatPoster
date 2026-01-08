@@ -37,12 +37,13 @@ exports.main = async (event, context) => {
       case 'listAll': {
         // 获取所有作品，不筛选 openid，按 createdAt 降序
         const MAX_LIMIT = 100
-        const limit = Math.min(Math.max(Number(event.limit || MAX_LIMIT), 1), MAX_LIMIT)
         
         // 先获取总数
         const countResult = await db.collection(COLLECTION).count()
         const total = countResult.total
+        console.log('listAll: 总作品数', total)
         const batchTimes = Math.ceil(total / MAX_LIMIT)
+        console.log('listAll: 需要分', batchTimes, '批获取')
         
         // 分批获取
         const tasks = []
@@ -60,6 +61,9 @@ exports.main = async (event, context) => {
         const allData = results.reduce((acc, cur) => {
           return acc.concat(cur.data)
         }, [])
+        
+        console.log('listAll: 实际获取到', allData.length, '条记录')
+        console.log('listAll: openid 列表', [...new Set(allData.map(d => d._openid))])
         
         return { ok: true, data: allData }
       }
