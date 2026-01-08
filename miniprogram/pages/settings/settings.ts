@@ -4,6 +4,7 @@ Component({
     maxUndoSteps: 10,
     limitDialogVisible: false,
     tempLimitValue: '',
+    cloudImageUrl: '', // 云存储图片的临时路径
   },
 
   lifetimes: {
@@ -109,6 +110,22 @@ Component({
 
     onBackHome() {
       wx.navigateBack({ delta: 1 })
+    },
+
+    async onLoadCloudImage() {
+      const fileID = 'cloud://cloud1-8gonkf4q94e7505c.636c-cloud1-8gonkf4q94e7505c-1393918820/backgrounds/bg1.png'
+      
+      try {
+        wx.showLoading({ title: '读取中...' })
+        const downloadRes = await wx.cloud.downloadFile({ fileID })
+        this.setData({ cloudImageUrl: downloadRes.tempFilePath })
+        wx.hideLoading()
+        wx.showToast({ title: '读取成功', icon: 'success' })
+      } catch (err: any) {
+        console.error('读取云存储失败', err)
+        wx.hideLoading()
+        wx.showToast({ title: '读取失败', icon: 'none' })
+      }
     },
   },
 })

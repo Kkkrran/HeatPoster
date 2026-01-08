@@ -16,6 +16,19 @@
   </view>
 
   <view class="section">
+    <view class="card">
+      <view class="card-title">云存储</view>
+      <view class="card-desc">从云存储读取图片文件</view>
+      <view class="card-actions">
+        <t-button theme="primary" size="small" bindtap="onLoadCloudImage">读取云存储</t-button>
+      </view>
+      <view class="cloud-image-container" wx:if="{{cloudImageUrl}}">
+        <image class="cloud-image" src="{{cloudImageUrl}}" mode="aspectFit"></image>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
     <t-cell-group>
       <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
         <view slot="note">
