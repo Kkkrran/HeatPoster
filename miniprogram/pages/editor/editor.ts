@@ -560,31 +560,13 @@ Page({
     this.toast('正在保存...', 'loading')
     
     try {
-      const strokesData = JSON.stringify(self.strokes)
-      const fs = wx.getFileSystemManager()
-      const pointsPath = `${wx.env.USER_DATA_PATH}/${Date.now()}_points.json`
-      fs.writeFileSync(pointsPath, strokesData, 'utf8')
-
-      const openid = this.data.openid || 'unknown'
-      const { fileID: pointsFileId } = await wx.cloud.uploadFile({
-        cloudPath: `artworks/${openid}/${Date.now()}_points.json`,
-        filePath: pointsPath
-      })
-      
-      // 使用getComposedImagePath生成包含常驻背景和临时背景的合成图
-      const composedImagePath = await this.getComposedImagePath()
-      
-      const { fileID: thumbnailFileId } = await wx.cloud.uploadFile({
-        cloudPath: `artworks/${openid}/${Date.now()}_thumb.png`,
-        filePath: composedImagePath
-      })
-      
+      // 确保作品 id 在上传前就存在，这样多次保存会使用相同的文件名
       let id = this.data.artworkId
       if (!id) {
         // 创建新作品时，如果有常驻背景，使用常驻背景的比例
         let width = self.width
         let height = self.height
-        
+
         if (this.data.permanentBackgroundAspectRatio) {
           // 根据常驻背景的比例调整画布尺寸
           // 保持当前画布的高度，根据比例调整宽度
@@ -592,21 +574,41 @@ Page({
           width = containerHeight * this.data.permanentBackgroundAspectRatio
           height = containerHeight
         }
-        
-         const res = await wx.cloud.callFunction({
-           name: 'editor',
-           data: { 
-             action: 'create',
-             name: '未命名作品',
-             width: width,
-             height: height
-           }
-         })
-         // @ts-ignore
-         id = res.result.data.id
-         this.setData({ artworkId: id })
+
+        const res = await wx.cloud.callFunction({
+          name: 'editor',
+          data: { 
+            action: 'create',
+            name: '未命名作品',
+            width: width,
+            height: height
+          }
+        })
+        // @ts-ignore
+        id = res.result.data.id
+        this.setData({ artworkId: id })
       }
-      
+
+      // 使用 artwork id 作为文件名的一部分，确保多次保存保持一致
+      const strokesData = JSON.stringify(self.strokes)
+      const fs = wx.getFileSystemManager()
+      const pointsPath = `${wx.env.USER_DATA_PATH}/${id}_points.json`
+      fs.writeFileSync(pointsPath, strokesData, 'utf8')
+
+      const openid = this.data.openid || 'unknown'
+      const { fileID: pointsFileId } = await wx.cloud.uploadFile({
+        cloudPath: `artworks/${openid}/${id}_points.json`,
+        filePath: pointsPath
+      })
+
+      // 使用getComposedImagePath生成包含常驻背景和临时背景的合成图
+      const composedImagePath = await this.getComposedImagePath()
+
+      const { fileID: thumbnailFileId } = await wx.cloud.uploadFile({
+        cloudPath: `artworks/${openid}/${id}_thumb.png`,
+        filePath: composedImagePath
+      })
+
       await wx.cloud.callFunction({
         name: 'editor',
         data: {
@@ -616,10 +618,25 @@ Page({
           thumbnailFileId
         }
       })
-      
+
       this.setData({ hasUnsavedChanges: false })
       this.updateExitConfirmState()
       this.toast('保存成功', 'success')
+
+      // 保存成功后直接导出合成图到相册（不再弹窗）
+      try {
+        // 这里复用之前生成并上传时的 composedImagePath，这样避免重复合成
+        // 注意：composedImagePath 在上方已定义并生成
+        if (typeof composedImagePath === 'string' && composedImagePath) {
+          await this.saveComposedToAlbum(composedImagePath)
+        } else {
+          // 保险起见，若不存在则重新生成一次
+          const composedPathLocal = await this.getComposedImagePath()
+          await this.saveComposedToAlbum(composedPathLocal)
+        }
+      } catch (err) {
+        console.error('导出到相册失败', err)
+      }
       
     } catch (err) {
       console.error(err)
@@ -688,6 +705,49 @@ Page({
           }
         }
       }
+    })
+  },
+
+    /**
+   * 将本地合成图保存到相册（处理授权）
+   */
+  async saveComposedToAlbum(filePath: string) {
+    if (!filePath) {
+      this.toast('未找到可导出的图片', 'error')
+      return
+    }
+
+    return new Promise<void>((resolve) => {
+      wx.saveImageToPhotosAlbum({
+        filePath,
+        success: () => {
+          this.toast('已保存到相册', 'success')
+          resolve()
+        },
+        fail: (err: any) => {
+          console.error('saveImageToPhotosAlbum failed', err)
+          // 如果是授权问题，引导用户去设置
+          const errMsg = (err && err.errMsg) || ''
+          if (errMsg.includes('auth') || errMsg.includes('authorize') || errMsg.includes('fail')) {
+            wx.showModal({
+              title: '需要授权',
+              content: '请授权“保存到相册”以便导出图片',
+              confirmText: '去设置',
+              cancelText: '取消',
+              success: (res) => {
+                if (res.confirm) {
+                  wx.openSetting()
+                }
+                resolve()
+              },
+              fail: () => resolve()
+            })
+          } else {
+            this.toast('保存到相册失败', 'error')
+            resolve()
+          }
+        }
+      })
     })
   },
 
@@ -944,6 +1004,26 @@ Page({
       
       // 生成合成图片
       const composedPath = await this.getComposedImagePath()
+
+      // 询问用户是否先保存到相册或直接打印
+      try {
+        const modalRes = await new Promise<WechatMiniprogram.ShowModalSuccessCallbackResult>((resolve) => {
+          wx.showModal({
+            title: '导出或打印',
+            content: '是否先将合成图片保存到相册再打印？（确定：保存并打印，取消：直接打印）',
+            confirmText: '保存并打印',
+            cancelText: '直接打印',
+            success: resolve,
+            fail: () => resolve({ confirm: false, cancel: true } as any)
+          })
+        })
+
+        if (modalRes.confirm) {
+          await this.saveComposedToAlbum(composedPath)
+        }
+      } catch (err) {
+        console.error('保存并打印流程出错', err)
+      }
 
       // 使用用户设置的打印参数
       const PageImageObject = [{
