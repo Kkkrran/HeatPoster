@@ -131,5 +131,9 @@ Component({
     onGoBgSelect() {
       wx.navigateTo({ url: '/pages/bgselect/bgselect' })
     },
+
+    onGoAlbum() {
+      wx.navigateTo({ url: '/pages/album/album' })
+    },
   },
 })

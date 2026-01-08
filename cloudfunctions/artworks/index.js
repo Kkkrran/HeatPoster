@@ -34,6 +34,36 @@ exports.main = async (event, context) => {
         return { ok: true, data: res.data }
       }
 
+      case 'listAll': {
+        // 获取所有作品，不筛选 openid，按 createdAt 降序
+        const MAX_LIMIT = 100
+        const limit = Math.min(Math.max(Number(event.limit || MAX_LIMIT), 1), MAX_LIMIT)
+        
+        // 先获取总数
+        const countResult = await db.collection(COLLECTION).count()
+        const total = countResult.total
+        const batchTimes = Math.ceil(total / MAX_LIMIT)
+        
+        // 分批获取
+        const tasks = []
+        for (let i = 0; i < batchTimes; i++) {
+          const promise = db
+            .collection(COLLECTION)
+            .orderBy('createdAt', 'desc')
+            .skip(i * MAX_LIMIT)
+            .limit(MAX_LIMIT)
+            .get()
+          tasks.push(promise)
+        }
+        
+        const results = await Promise.all(tasks)
+        const allData = results.reduce((acc, cur) => {
+          return acc.concat(cur.data)
+        }, [])
+        
+        return { ok: true, data: allData }
+      }
+
       case 'get': {
         const id = pickString(event.id)
         if (!id) return { ok: false, error: 'missing id' }
