@@ -17,7 +17,7 @@
   
   <view class="section">
     <t-cell-group>
-      <t-cell title="常驻背景选择" description="选择应用常驻背景图片" bindtap="onGoBgSelect" arrow />
+      <t-cell title="常驻背景选择" description="{{selectedBgFileName || '选择应用常驻背景图片'}}" bindtap="onGoBgSelect" arrow />
       <t-cell title="相册" description="查看所有作品" bindtap="onGoAlbum" arrow />
       <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
         <view slot="note">

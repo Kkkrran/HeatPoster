@@ -5,6 +5,7 @@ Component({
     limitDialogVisible: false,
     tempLimitValue: '',
     cloudImageUrl: '', // 云存储图片的临时路径
+    selectedBgFileName: '', // 当前选择的背景文件名
   },
 
   lifetimes: {
@@ -13,11 +14,45 @@ Component({
       if (exitConfirm === '') exitConfirm = true // 默认为开启
       
       const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
+      this.loadSelectedBackground()
       this.setData({ exitConfirm, maxUndoSteps })
     }
   },
 
+  pageLifetimes: {
+    show() {
+      // 每次页面显示时都重新加载所有设置（从背景选择页返回时会更新）
+      this.refreshAllSettings()
+    }
+  },
+
   methods: {
+    loadSelectedBackground() {
+      const selectedBg = wx.getStorageSync('selected_background')
+      if (selectedBg && selectedBg.name) {
+        // 从 name 字段生成文件名（name 是 "bg1" 格式，需要加上 ".png"）
+        const fileName = `${selectedBg.name}.png`
+        this.setData({ selectedBgFileName: fileName })
+      } else {
+        this.setData({ selectedBgFileName: '' })
+      }
+    },
+
+    refreshAllSettings() {
+      // 重新加载退出确认设置
+      let exitConfirm = wx.getStorageSync('editor_exit_confirm')
+      if (exitConfirm === '') exitConfirm = true // 默认为开启
+
+      // 重新加载撤销步数限制设置
+      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
+
+      // 重新加载选择的背景
+      this.loadSelectedBackground()
+
+      // 更新所有设置到页面数据
+      this.setData({ exitConfirm, maxUndoSteps })
+    },
+
     onExitConfirmChange(e: any) {
       const val = e.detail.value
       this.setData({ exitConfirm: val })

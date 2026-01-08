@@ -91,19 +91,29 @@ Component({
       const bg = this.data.backgrounds[index]
       if (!bg) return
 
-      // 这里可以添加选择背景后的逻辑
-      // 例如保存到本地存储或返回上一页
-      wx.showToast({
-        title: `已选择 ${bg.name}`,
-        icon: 'success',
-      })
-
-      // 可以保存选择的背景到本地存储
+      // 保存选择的背景到本地存储
       wx.setStorageSync('selected_background', {
         name: bg.name,
         fileID: bg.fileID,
         tempFilePath: bg.tempFilePath,
       })
+
+      // 显示选择成功的提示
+      wx.showToast({
+        title: `已选择 ${bg.name}`,
+        icon: 'success',
+        duration: 1500, // 稍微延长显示时间，让用户看到提示
+      })
+
+      // 延迟一点时间后自动返回设置页面
+      setTimeout(() => {
+        wx.navigateBack({
+          delta: 1,
+          success: () => {
+            // 返回成功后，settings页面会通过pageLifetimes.show()自动刷新
+          }
+        })
+      }, 1500)
     },
   },
 })
