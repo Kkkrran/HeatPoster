@@ -337,12 +337,34 @@ Page({
     const { x, y } = e.touches[0]
     const self = this as any
     self.currentStroke = []
+    self.lastPoint = { x, y } // 记录上一个点的位置
     this.addPoint(x, y)
   },
 
   onTouchMove(e: any) {
     const { x, y } = e.touches[0]
-    this.addPoint(x, y)
+    const self = this as any
+    
+    // 计算与上一个点的距离
+    const lastPoint = self.lastPoint
+    const distance = Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2)
+    
+    // 如果距离大于阈值（例如5像素），在两点之间插入额外的点
+    const threshold = 5 // 可以调整这个值来控制插值密度
+    if (distance > threshold) {
+      const steps = Math.ceil(distance / threshold)
+      for (let i = 1; i <= steps; i++) {
+        const ratio = i / steps
+        const interpolatedX = lastPoint.x + (x - lastPoint.x) * ratio
+        const interpolatedY = lastPoint.y + (y - lastPoint.y) * ratio
+        this.addPoint(interpolatedX, interpolatedY)
+      }
+    } else {
+      this.addPoint(x, y)
+    }
+    
+    // 更新上一个点
+    self.lastPoint = { x, y }
   },
 
   onTouchEnd(_e: any) {
