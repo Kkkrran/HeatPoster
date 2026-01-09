@@ -15,24 +15,12 @@ interface HeatPoint {
 // 定义笔画结构（已使用，但TypeScript可能检测不到）
 // type Stroke = HeatPoint[]
 
-const BRUSH_RADIUS_RANGE = { min: 6, max: 60 }
-const BRUSH_CONFIG = {
-  normal: { radius: 40, heatRate: 0.6, heatMin: 0.2, heatMax: 3 },
-  pureBlack: { radius: 6, heatRate: 10, heatMin: 3, heatMax: 10 }
-}
-
-const clampValue = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
-
 Page({
 
   data: {
     toolsVisible: false,
     brushRadius: 40,
     heatRate: 0.6,
-    brushRadiusMin: BRUSH_RADIUS_RANGE.min,
-    brushRadiusMax: BRUSH_RADIUS_RANGE.max,
-    heatRateMin: BRUSH_CONFIG.normal.heatMin,
-    heatRateMax: BRUSH_CONFIG.normal.heatMax,
     canUndo: false,
     canRedo: false,
     openid: '',
@@ -46,7 +34,6 @@ Page({
 
     hasUnsavedChanges: false,
     maxUndoSteps: 10,
-  pureBlackBrush: false,
     // 打印相关
     connectedDevice: null as any,
     printCanvasCtx: null as any,
@@ -78,7 +65,6 @@ Page({
     this.initPrintCanvas()
     this.checkPrinterConnection()
     this.loadPrintSettings() // 加载保存的打印参数
-    this.loadBrushPreferences()
     this.getOpenId()
     
     if (options && options.id) {
@@ -103,8 +89,6 @@ Page({
     this.checkPrinterConnection()
     // 重新加载常驻背景（可能用户在设置页面修改了）
     this.loadPermanentBackground()
-    // 刷新画笔模式
-    this.loadBrushPreferences()
   },
 
   updateExitConfirmState() {
@@ -190,34 +174,6 @@ Page({
     } catch (err) {
       console.error('加载常驻背景失败', err)
     }
-  },
-
-  loadBrushPreferences() {
-    const pureBlackBrush = !!wx.getStorageSync('editor_pure_black_brush')
-    const prevMode = !!this.data.pureBlackBrush
-    const modeChanged = pureBlackBrush !== prevMode
-    const config = pureBlackBrush ? BRUSH_CONFIG.pureBlack : BRUSH_CONFIG.normal
-
-    const currentHeat = this.data.heatRate ?? config.heatRate
-    const currentRadius = this.data.brushRadius ?? config.radius
-
-    const nextData: Record<string, any> = {
-      pureBlackBrush,
-      heatRateMin: config.heatMin,
-      heatRateMax: config.heatMax,
-      brushRadiusMin: BRUSH_RADIUS_RANGE.min,
-      brushRadiusMax: BRUSH_RADIUS_RANGE.max,
-    }
-
-    if (modeChanged) {
-      nextData.heatRate = config.heatRate
-      nextData.brushRadius = config.radius
-    } else {
-      nextData.heatRate = clampValue(currentHeat, config.heatMin, config.heatMax)
-      nextData.brushRadius = clampValue(currentRadius, BRUSH_RADIUS_RANGE.min, BRUSH_RADIUS_RANGE.max)
-    }
-
-    this.setData(nextData)
   },
 
   toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
@@ -446,23 +402,15 @@ Page({
     const imageData = self.memCtx.getImageData(0, 0, w, h)
     const data = imageData.data
     const palette = self.palette
-    const usePureBlack = this.data?.pureBlackBrush
     
     for (let i = 0; i < data.length; i += 4) {
       const alpha = data[i + 3]
       if (alpha > 0) {
-        if (usePureBlack) {
-          data[i] = 0
-          data[i + 1] = 0
-          data[i + 2] = 0
-          data[i + 3] = alpha
-        } else {
-          const offset = alpha * 4
-          data[i] = palette[offset]
-          data[i + 1] = palette[offset + 1]
-          data[i + 2] = palette[offset + 2]
-          data[i + 3] = palette[offset + 3]
-        }
+        const offset = alpha * 4
+        data[i] = palette[offset]
+        data[i + 1] = palette[offset + 1]
+        data[i + 2] = palette[offset + 2]
+        data[i + 3] = palette[offset + 3]
       }
     }
     
@@ -525,12 +473,7 @@ Page({
     console.log('onBrushRadiusChange', e)
     const { value } = e.detail || {}
     if (value !== undefined) {
-      const min = this.data.brushRadiusMin || BRUSH_RADIUS_RANGE.min
-      const max = this.data.brushRadiusMax || BRUSH_RADIUS_RANGE.max
-      const numericValue = Number(value)
-      if (Number.isNaN(numericValue)) return
-      const radius = clampValue(numericValue, min, max)
-      this.setData({ brushRadius: radius })
+      this.setData({ brushRadius: value })
     }
   },
 
@@ -538,12 +481,7 @@ Page({
     console.log('onHeatRateChange', e)
     const { value } = e.detail || {}
     if (value !== undefined) {
-      const min = this.data.heatRateMin || BRUSH_CONFIG.normal.heatMin
-      const max = this.data.heatRateMax || BRUSH_CONFIG.normal.heatMax
-      const numericValue = parseFloat(value)
-      if (Number.isNaN(numericValue)) return
-      const heatRate = clampValue(numericValue, min, max)
-      this.setData({ heatRate: Number(heatRate.toFixed(2)) })
+      this.setData({ heatRate: value })
     }
   },
 
@@ -860,23 +798,15 @@ Page({
       const heatmapData = self.memCtx.getImageData(0, 0, width, height)
       const pixels = heatmapData.data
       const palette = self.palette
-      const usePureBlack = this.data?.pureBlackBrush
 
       for (let i = 0; i < pixels.length; i += 4) {
         const alpha = pixels[i + 3]
         if (alpha > 0) {
-          if (usePureBlack) {
-            pixels[i] = 0
-            pixels[i + 1] = 0
-            pixels[i + 2] = 0
-            pixels[i + 3] = alpha
-          } else {
-            const offset = alpha * 4
-            pixels[i] = palette[offset]
-            pixels[i + 1] = palette[offset + 1]
-            pixels[i + 2] = palette[offset + 2]
-            pixels[i + 3] = palette[offset + 3]
-          }
+          const offset = alpha * 4
+          pixels[i] = palette[offset]
+          pixels[i + 1] = palette[offset + 1]
+          pixels[i + 2] = palette[offset + 2]
+          pixels[i + 3] = palette[offset + 3]
         }
       }
 

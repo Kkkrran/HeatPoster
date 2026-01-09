@@ -83,7 +83,7 @@
             <text class="value">{{brushRadius}}</text>
           </view>
           <view class="slider-vertical-box">
-            <t-slider vertical value="{{brushRadius}}" min="{{brushRadiusMin}}" max="{{brushRadiusMax}}" step="1" bind:change="onBrushRadiusChange" />
+            <t-slider vertical value="{{brushRadius}}" min="6" max="60" step="1" bind:change="onBrushRadiusChange" />
           </view>
         </view>
 
@@ -93,7 +93,7 @@
             <text class="value">{{heatRate}}</text>
           </view>
           <view class="slider-vertical-box">
-            <t-slider vertical value="{{heatRate}}" min="{{heatRateMin}}" max="{{heatRateMax}}" step="0.1" bind:change="onHeatRateChange" />
+            <t-slider vertical value="{{heatRate}}" min="0.2" max="3" step="0.1" bind:change="onHeatRateChange" />
           </view>
         </view>
       </view>
