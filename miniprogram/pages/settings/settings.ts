@@ -190,6 +190,10 @@ Component({
       wx.navigateTo({ url: '/pages/bgselect/bgselect' })
     },
 
+    onGoBrush() {
+      wx.navigateTo({ url: '/pages/brush/brush' })
+    },
+
     onGoAlbum() {
       wx.navigateTo({ url: '/pages/album/album' })
     },

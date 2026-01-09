@@ -3,6 +3,7 @@
   "pages": [
     "pages/index/index",
     "pages/editor/editor",
+    "pages/brush/brush",
     "pages/settings/settings",
     "pages/bgselect/bgselect",
     "pages/album/album",

@@ -1,0 +1,44 @@
+<view class="container">
+  <!-- Canvas 层 -->
+  <view class="canvas-wrap" style="{{ canvasContainerStyle }}">
+    <canvas 
+      type="2d" 
+      id="brushCanvas" 
+      class="brush-canvas"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+      hidden="{{isCanvasHidden}}"
+    ></canvas>
+    <!-- 快照图片，用于在弹窗打开时替代 canvas 显示，避免层级遮挡 -->
+    <image 
+      wx:if="{{isCanvasHidden && snapshotUrl}}" 
+      src="{{snapshotUrl}}" 
+      class="brush-canvas-snapshot"
+      mode="scaleToFill"
+    />
+  </view>
+
+  <!-- 工具栏 Toggle -->
+  <view class="toggle-tools" bind:tap="toggleTools" wx:if="{{!toolsVisible}}">
+    <t-icon name="setting" size="48rpx" />
+  </view>
+
+  <!-- 工具栏弹窗 -->
+  <t-popup visible="{{toolsVisible}}" bind:visible-change="onToolsVisibleChange" placement="bottom">
+    <view class="toolbar">
+      <view class="tool-section">
+        <view class="label">笔刷大小</view>
+        <t-slider value="{{lineMax}}" min="{{10}}" max="{{100}}" bind:change="onLineWidthChange" />
+      </view>
+      
+      <view class="tool-actions">
+        <t-button theme="primary" variant="outline" block bind:tap="onImportBackground">导入背景</t-button>
+        <t-button theme="danger" variant="outline" block bind:tap="onClear">清空</t-button>
+        <t-button theme="primary" block bind:tap="onSave">保存作品</t-button>
+      </view>
+    </view>
+  </t-popup>
+
+  <t-toast id="t-toast" />
+</view>
