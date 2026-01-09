@@ -13,13 +13,15 @@ interface BluetoothDevice {
 // 存储键名常量
 const STORAGE_KEYS = {
   EXIT_CONFIRM: 'editor_exit_confirm',
-  MAX_UNDO: 'editor_max_undo_steps'
+  MAX_UNDO: 'editor_max_undo_steps',
+  PURE_BLACK_BRUSH: 'editor_pure_black_brush'
 }
 
 Component({
   data: {
     exitConfirm: true,
     maxUndoSteps: 50,
+    pureBlackBrush: false,
     limitDialogVisible: false,
     tempLimitValue: '',
     blueList: [],
@@ -37,6 +39,8 @@ Component({
       
       const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 50
       
+      const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
+
       // 加载已保存的打印机连接信息
       const savedDevice = wx.getStorageSync('connected_printer_device')
       if (savedDevice) {
@@ -48,19 +52,18 @@ Component({
       
       self.setData({ 
         exitConfirm, 
-        maxUndoSteps 
+        maxUndoSteps,
+        pureBlackBrush
       })
     }
   },
 
-  pageLifetimes: {
-    show() {
-      // 每次页面显示时都重新加载所有设置（从背景选择页返回时会更新）
-      ;(this as any).refreshAllSettings()
-    }
-  },
-
   methods: {
+    // 组件类型页面的 onShow 生命周期
+    onShow() {
+      ;(this as any).refreshAllSettings()
+    },
+
     loadSelectedBackground() {
       const self = this as any
       const selectedBg = wx.getStorageSync('selected_background')
@@ -80,19 +83,27 @@ Component({
       if (exitConfirm === '') exitConfirm = true // 默认为开启
 
       // 重新加载撤销步数限制设置
-      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+  const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+  const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
 
       // 重新加载选择的背景
       self.loadSelectedBackground()
 
       // 更新所有设置到页面数据
-      self.setData({ exitConfirm, maxUndoSteps })
+  self.setData({ exitConfirm, maxUndoSteps, pureBlackBrush })
     },
 
     onExitConfirmChange(e: any) {
       const val = e.detail.value
       ;(this as any).setData({ exitConfirm: val })
       wx.setStorageSync(STORAGE_KEYS.EXIT_CONFIRM, val)
+    },
+
+    onPureBlackBrushChange(e: any) {
+      const val = e.detail.value
+      ;(this as any).setData({ pureBlackBrush: val })
+      wx.setStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH, val)
+      wx.showToast({ title: val ? '已开启纯黑画笔' : '已恢复热力色', icon: 'success' })
     },
 
     onEditUndoLimit() {
