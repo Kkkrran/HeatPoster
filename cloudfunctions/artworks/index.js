@@ -37,11 +37,12 @@ exports.main = async (event, context) => {
       case 'listAll': {
         // 获取所有作品，不筛选 openid，按 createdAt 降序
         const MAX_LIMIT = 100
+        const MAX_TOTAL = 200 // 作品总数上限
         
         // 先获取总数
         const countResult = await db.collection(COLLECTION).count()
-        const total = countResult.total
-        console.log('listAll: 总作品数', total)
+        const total = Math.min(countResult.total, MAX_TOTAL) // 限制总数
+        console.log('listAll: 总作品数', countResult.total, '限制为', total)
         const batchTimes = Math.ceil(total / MAX_LIMIT)
         console.log('listAll: 需要分', batchTimes, '批获取')
         
