@@ -402,6 +402,42 @@ Page({
           }
       })
   },
+
+  async saveToAlbum(filePath: string) {
+    if (!filePath) return
+
+    return new Promise<void>((resolve) => {
+      wx.saveImageToPhotosAlbum({
+        filePath,
+        success: () => {
+          this.toast('已保存到相册', 'success')
+          resolve()
+        },
+        fail: (err: any) => {
+          console.error('saveImageToPhotosAlbum failed', err)
+          const errMsg = (err && err.errMsg) || ''
+          if (errMsg.includes('auth') || errMsg.includes('authorize') || errMsg.includes('fail')) {
+            wx.showModal({
+              title: '需要授权',
+              content: '请授权“保存到相册”以便导出图片',
+              confirmText: '去设置',
+              cancelText: '取消',
+              success: (res) => {
+                if (res.confirm) {
+                  wx.openSetting()
+                }
+                resolve()
+              },
+              fail: () => resolve()
+            })
+          } else {
+             this.toast('保存到相册失败', 'error')
+             resolve()
+          }
+        }
+      })
+    })
+  },
   
   async onSave() {
      this.toast('保存中...', 'loading')
@@ -426,6 +462,9 @@ Page({
          })
          
          this.toast('保存成功', 'success')
+
+         // 同时保存到相册
+         await this.saveToAlbum(tempFile as string)
      } catch (e) {
          console.error('Save failed', e)
          this.toast('保存失败', 'error')
