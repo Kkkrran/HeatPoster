@@ -105,16 +105,6 @@ Component({
         icon: 'success',
         duration: 1500, // 稍微延长显示时间，让用户看到提示
       })
-
-      // 延迟一点时间后自动返回设置页面
-      setTimeout(() => {
-        wx.navigateBack({
-          delta: 1,
-          success: () => {
-            // 返回成功后，settings页面会通过pageLifetimes.show()自动刷新
-          }
-        })
-      }, 1500)
     },
 
     onSelectNoBg() {
@@ -127,16 +117,6 @@ Component({
         icon: 'success',
         duration: 1500,
       })
-
-      // 延迟一点时间后自动返回设置页面
-      setTimeout(() => {
-        wx.navigateBack({
-          delta: 1,
-          success: () => {
-            // 返回成功后，settings页面会通过pageLifetimes.show()自动刷新
-          }
-        })
-      }, 1500)
     },
   },
 })

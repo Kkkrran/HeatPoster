@@ -97,28 +97,36 @@ Page({
 
   initCanvas() {
     const query = this.createSelectorQuery()
-    query.select('.canvas-wrap').boundingClientRect().exec((wrapRes) => {
-      const wrapInfo = wrapRes[0]
-      if (!wrapInfo) return
+    query.select('.canvas-wrap').boundingClientRect().exec((_wrapRes) => {
+      // 就算获取不到，也尝试用系统信息兜底
+      // const wrapInfo = wrapRes[0]
+      // if (!wrapInfo) return
 
-      // Handle Aspect Ratio
+      // Handle Aspect Ratio: 严格约束画布比例使其与常驻背景一致
       let canvasContainerStyle = ''
       if (this.data.permanentBackgroundAspectRatio) {
         const ar = this.data.permanentBackgroundAspectRatio
-        const maxWidth = wrapInfo.width // Padding handled in CSS?
-        const maxHeight = wrapInfo.height
         
-        let targetWidth = maxHeight * ar
-        let targetHeight = maxHeight
+        // 使用系统窗口尺寸，更可靠
+        const sys = wx.getSystemInfoSync()
+        // 留出一定的边距 (例如 5% 边距，即占用 90% 宽/高)
+        const maxWidth = sys.windowWidth * 0.9
+        const maxHeight = sys.windowHeight * 0.9
         
-        if (targetWidth > maxWidth) {
-          targetWidth = maxWidth
-          targetHeight = maxWidth / ar
+        // 尝试以宽度为基准 (宽占满 90%)
+        let targetWidth = maxWidth
+        let targetHeight = targetWidth / ar
+        
+        // 如果算出的高度超出了最大高度限制，则以高度为基准
+        if (targetHeight > maxHeight) {
+          targetHeight = maxHeight
+          targetWidth = targetHeight * ar
         }
         
-        // We can just use px in style
+        // 设置画布容器大小，使其完全贴合背景比例，最大化利用屏幕空间
         canvasContainerStyle = `width: ${targetWidth}px; height: ${targetHeight}px;`
       }
+      
       this.setData({ canvasContainerStyle }, () => {
           // Now fetch canvas node
           setTimeout(() => {
@@ -176,27 +184,12 @@ Page({
       this.ctx.fillRect(0, 0, this.width, this.height)
       
       // Draw Permanent BG
-      const drawImage = async (src: string) => {
-          const img = this.canvas.createImage()
-          await new Promise((resolve) => {
-              img.onload = resolve
-              img.onerror = resolve
-              img.src = src
-          })
-          
-          // Draw contain or cover? 
-          // Since we resized canvas to match AR of permanent BG, we can just draw full rect
-          this.ctx.drawImage(img, 0, 0, this.width, this.height)
-      }
-      
       if (this.data.permanentBackgroundImage) {
-          drawImage(this.data.permanentBackgroundImage)
-          // Wait for it? 
-          // For async drawing in sync init, we wrap it.
-          // Correct implementation:
           const img = this.canvas.createImage()
           img.onload = () => {
+              // 画布尺寸已根据背景调整比例，直接全屏绘制（拉伸填满即为正确比例）
               this.ctx.drawImage(img, 0, 0, this.width, this.height)
+              
               // Draw Temp BG on top if exists
               if (this.data.backgroundImage) {
                  this.drawTempDetails()
@@ -374,7 +367,7 @@ Page({
   onClear() {
       this.drawBackground()
       this.toast('已清空')
-      this.setData({ toolsVisible: false })
+      this.toggleTools()
   },
   
   onImportBackground() {
@@ -386,19 +379,13 @@ Page({
               
               const draw = (p: string) => {
                    this.setData({ backgroundImage: p }, () => {
-                      this.drawBackground() // Re-draw everything (Bg + New Temp Bg). BUT this wipes strokes!
-                      // User expects: import bg, keep strokes? 
-                      // Editor clears strokes usually or puts BG under.
-                      // Since we draw everything on one canvas (no layering for strokes vs bg in this simple implementation),
-                      // we technically lose strokes if we clearRect.
-                      // But `brush` page usually is for practice.
-                      // Ideally we should use layers (2 canvases) or repaint strokes.
-                      // HTML used simple canvas.
-                      // I will clear strokes when changing BG for simplicity unless requested otherwise.
-                      // "清空页面" implies clearing strokes.
-                      // Importing bg might imply resetting scene.
+                      this.drawBackground()
                    })
-                   this.setData({ toolsVisible: false })
+                   // 导入完成后恢复 Canvas 显示
+                   this.setData({ 
+                       toolsVisible: false,
+                       isCanvasHidden: false
+                   })
               }
               
               // Use crop if available? Editor uses wx.editImage.
