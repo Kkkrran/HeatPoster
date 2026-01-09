@@ -96,7 +96,7 @@ Page({
   },
   
   onShow() {
-    const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+    const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
     this.setData({ maxUndoSteps })
     this.updateExitConfirmState()
     // 每次显示页面时检查打印机连接状态

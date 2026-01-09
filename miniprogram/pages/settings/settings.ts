@@ -20,7 +20,7 @@ const STORAGE_KEYS = {
 Component({
   data: {
     exitConfirm: true,
-    maxUndoSteps: 50,
+    maxUndoSteps: 10,
     pureBlackBrush: false,
     limitDialogVisible: false,
     tempLimitValue: '',
@@ -83,7 +83,7 @@ Component({
       if (exitConfirm === '') exitConfirm = true // 默认为开启
 
       // 重新加载撤销步数限制设置
-  const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+  const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
   const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
 
       // 重新加载选择的背景
@@ -123,8 +123,8 @@ Component({
 
     onLimitConfirm() {
       const val = parseInt((this as any).data.tempLimitValue, 10)
-      if (isNaN(val) || val < 10 || val > 100) {
-        wx.showToast({ title: '请输入10-100之间的整数', icon: 'none' })
+      if (isNaN(val) || val < 5 || val > 20) {
+        wx.showToast({ title: '请输入5-20之间的整数', icon: 'none' })
         return
       }
       ;(this as any).setData({ 
