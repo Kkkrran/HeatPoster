@@ -19,7 +19,7 @@ const STORAGE_KEYS = {
 Component({
   data: {
     exitConfirm: true,
-    maxUndoSteps: 50,
+    maxUndoSteps: 10,
     limitDialogVisible: false,
     tempLimitValue: '',
     blueList: [],
@@ -35,7 +35,7 @@ Component({
       let exitConfirm = wx.getStorageSync(STORAGE_KEYS.EXIT_CONFIRM)
       if (exitConfirm === '') exitConfirm = true // 默认为开启
       
-      const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 50
+      const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 10
       
       // 加载已保存的打印机连接信息
       const savedDevice = wx.getStorageSync('connected_printer_device')
@@ -80,7 +80,7 @@ Component({
       if (exitConfirm === '') exitConfirm = true // 默认为开启
 
       // 重新加载撤销步数限制设置
-      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 50
+      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
 
       // 重新加载选择的背景
       self.loadSelectedBackground()
