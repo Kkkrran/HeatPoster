@@ -25,7 +25,40 @@ Component({
       const basePath = 'cloud://art-9g2yt6t89a45335b.6172-art-9g2yt6t89a45335b-1393918820/backgrounds/'
       const backgrounds: BackgroundItem[] = []
 
-      // 尝试加载 bg1 到 bg10
+      // 1. 加载本地背景 bglocal.png
+      try {
+        const localBgPath = '/images/bglocal.png'
+        const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
+          wx.getImageInfo({
+            src: localBgPath,
+            success: resolve,
+            fail: reject,
+          })
+        })
+        backgrounds.push({
+          name: '默认背景',
+          fileID: '', // 本地文件无 cloud ID
+          tempFilePath: localBgPath,
+          aspectRatio: imageInfo.width / imageInfo.height,
+        })
+      } catch (err) {
+        console.error('加载本地背景失败', err)
+      }
+
+      // 如果当前没有选中的背景，默认使用第一个（bglocal.png）如果不为空
+       const currentBg = wx.getStorageSync('selected_background')
+       if (!currentBg && backgrounds.length > 0) {
+           const bg = backgrounds[0]
+           wx.setStorageSync('selected_background', {
+                name: bg.name,
+                fileID: bg.fileID,
+                tempFilePath: bg.tempFilePath,
+                aspectRatio: bg.aspectRatio, // 保存宽高比
+            })
+       }
+
+      // 2. 尝试加载云端背景 bg1 到 bg10
+      const cloudBackgrounds: BackgroundItem[] = []
       const loadPromises = []
       for (let i = 1; i <= 10; i++) {
         const fileID = `${basePath}bg${i}.png`
@@ -33,7 +66,7 @@ Component({
           this.tryLoadBackground(fileID, `bg${i}`)
             .then(item => {
               if (item) {
-                backgrounds.push(item)
+                cloudBackgrounds.push(item)
               }
             })
             .catch(() => {
@@ -44,14 +77,15 @@ Component({
 
       await Promise.all(loadPromises)
       
-      // 按名称排序
-      backgrounds.sort((a, b) => {
+      // 按名称排序云端背景
+      cloudBackgrounds.sort((a, b) => {
         const numA = parseInt(a.name.replace('bg', ''))
         const numB = parseInt(b.name.replace('bg', ''))
         return numA - numB
       })
-
-      this.setData({ backgrounds, loading: false })
+      
+      // 合并本地背景和云端背景
+      this.setData({ backgrounds: backgrounds.concat(cloudBackgrounds), loading: false })
     },
 
     async tryLoadBackground(fileID: string, name: string): Promise<BackgroundItem | null> {
