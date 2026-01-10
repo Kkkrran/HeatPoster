@@ -130,41 +130,41 @@ Page({
 
   initCanvas() {
     const query = this.createSelectorQuery()
-    query.select('.canvas-wrap').boundingClientRect().exec((_wrapRes) => {
-      // 就算获取不到，也尝试用系统信息兜底
-      // const wrapInfo = wrapRes[0]
-      // if (!wrapInfo) return
+    query.select('.canvas-wrap').boundingClientRect().exec((wrapRes) => {
+      const wrapInfo = wrapRes[0]
+      if (!wrapInfo) return
 
       // Handle Aspect Ratio: 严格约束画布比例使其与常驻背景一致
       let canvasContainerStyle = ''
       if (this.data.permanentBackgroundAspectRatio) {
-        const ar = this.data.permanentBackgroundAspectRatio
+        const aspectRatio = this.data.permanentBackgroundAspectRatio
+
+        const maxWidth = wrapInfo.width - 48 // 减去左右padding
+        const maxHeight = wrapInfo.height - 24 // 减去底部padding
+
+        // 计算适合的尺寸（保持比例，尽量填满容器）
+        let targetWidth = maxHeight * aspectRatio
+        let targetHeight = maxHeight
         
-        // 使用系统窗口尺寸，更可靠
-        const sys = wx.getSystemInfoSync()
-        // 留出一定的边距 (例如 5% 边距，即占用 90% 宽/高)
-        const maxWidth = sys.windowWidth * 0.9
-        const maxHeight = sys.windowHeight * 0.9
-        
-        // 尝试以宽度为基准 (宽占满 90%)
-        let targetWidth = maxWidth
-        let targetHeight = targetWidth / ar
-        
-        // 如果算出的高度超出了最大高度限制，则以高度为基准
-        if (targetHeight > maxHeight) {
-          targetHeight = maxHeight
-          targetWidth = targetHeight * ar
+        // 如果宽度超出容器，则按宽度缩放
+        if (targetWidth > maxWidth) {
+          targetWidth = maxWidth
+          targetHeight = maxWidth / aspectRatio
         }
         
-        // 设置画布容器大小，使其完全贴合背景比例，最大化利用屏幕空间
-        canvasContainerStyle = `width: ${targetWidth}px; height: ${targetHeight}px;`
+        // 设置canvas容器的样式（使用rpx单位）
+        const systemInfo = wx.getSystemInfoSync()
+        const rpxRatio = systemInfo.windowWidth / 750
+        const targetWidthRpx = targetWidth / rpxRatio
+        const targetHeightRpx = targetHeight / rpxRatio
+        canvasContainerStyle = `width: ${targetWidthRpx}rpx; height: ${targetHeightRpx}rpx; margin: 0 auto;`
       }
       
       this.setData({ canvasContainerStyle }, () => {
-          // Now fetch canvas node
+          // If using style, give it time to render
           setTimeout(() => {
               this.initCanvasContext()
-          }, 50)
+          }, canvasContainerStyle ? 100 : 50)
       })
     })
   },
@@ -211,50 +211,89 @@ Page({
   drawBackground() {
       if (!this.ctx) return
       this.ctx.clearRect(0, 0, this.width, this.height)
-      
-      // Draw White Base
-      this.ctx.fillStyle = '#f2e0ba' // Match CSS
-      this.ctx.fillRect(0, 0, this.width, this.height)
-      
-      // Draw Permanent BG
-      if (this.data.permanentBackgroundImage) {
-          const img = this.canvas.createImage()
-          img.onload = () => {
-              // 画布尺寸已根据背景调整比例，直接全屏绘制（拉伸填满即为正确比例）
-              this.ctx.drawImage(img, 0, 0, this.width, this.height)
-              
-              // Draw Temp BG on top if exists
-              if (this.data.backgroundImage) {
-                 this.drawTempDetails()
-              }
-          }
-          img.src = this.data.permanentBackgroundImage
-      } else if (this.data.backgroundImage) {
-          this.drawTempDetails()
-      }
   },
-  
-  drawTempDetails() {
-      if (this.data.backgroundImage) {
-          const img = this.canvas.createImage()
-          img.onload = () => {
-              // Draw temp bg. How to fit? Contain.
-              // Center it.
-              const iW = img.width
-              const iH = img.height
-              const cW = this.width
-              const cH = this.height
-              
-              const scale = Math.min(cW / iW, cH / iH)
-              const dW = iW * scale
-              const dH = iH * scale
-              const dx = (cW - dW) / 2
-              const dy = (cH - dH) / 2
-              
-              this.ctx.drawImage(img, dx, dy, dW, dH)
-          }
-          img.src = this.data.backgroundImage
-      }
+
+  async getComposedImage() {
+      return new Promise((resolve, reject) => {
+          const query = this.createSelectorQuery()
+          query.select('#exportCanvas')
+              .fields({ node: true, size: true })
+              .exec(async (res) => {
+                  try {
+                    if (!res[0] || !res[0].node) {
+                        reject('Export canvas not found')
+                        return
+                    }
+                    
+                    const canvas = res[0].node
+                    const ctx = canvas.getContext('2d')
+                    const dpr = this.dpr || 1 // use same dpr
+                    
+                    // Use this.width/height which are logical pixels set in initCanvasContext
+                    const w = this.width 
+                    const h = this.height 
+                    
+                    canvas.width = w * dpr
+                    canvas.height = h * dpr
+                    ctx.scale(dpr, dpr)
+                    
+                    // 1. White Base
+                    ctx.fillStyle = '#ffffff'
+                    ctx.fillRect(0, 0, w, h)
+                    
+                    // 2. Permanent BG
+                    if (this.data.permanentBackgroundImage) {
+                        const img = canvas.createImage()
+                        await new Promise<void>((r) => { 
+                            img.onload = () => r(); 
+                            img.onerror = () => r(); // ignore error
+                            img.src = this.data.permanentBackgroundImage 
+                        })
+                        ctx.drawImage(img, 0, 0, w, h)
+                    }
+                    
+                    // 3. Temp BG
+                    if (this.data.backgroundImage) {
+                        const img = canvas.createImage()
+                        await new Promise<void>((r) => { 
+                            img.onload = () => r();
+                            img.onerror = () => r();
+                            img.src = this.data.backgroundImage 
+                        })
+                        // Contain logic
+                        const iW = img.width
+                        const iH = img.height
+                        
+                        // avoid divide by zero
+                        if (iW > 0 && iH > 0) {
+                            const scale = Math.min(w / iW, h / iH)
+                            const dW = iW * scale
+                            const dH = iH * scale
+                            const dx = (w - dW) / 2
+                            const dy = (h - dH) / 2
+                            ctx.drawImage(img, dx, dy, dW, dH)
+                        }
+                    }
+                    
+                    // 4. Strokes (Main Canvas)
+                    if (this.canvas) {
+                        ctx.drawImage(this.canvas, 0, 0, w, h)
+                    }
+                    
+                    // 5. Export
+                    setTimeout(() => {
+                        wx.canvasToTempFilePath({
+                            canvas: canvas,
+                            fileType: 'png',
+                            success: (r) => resolve(r.tempFilePath),
+                            fail: reject
+                        })
+                    }, 100)
+                  } catch(e) {
+                      reject(e)
+                  }
+              })
+      })
   },
 
   // Tools
@@ -411,14 +450,7 @@ Page({
               const path = res.tempFilePaths[0]
               
               const draw = (p: string) => {
-                   this.setData({ backgroundImage: p }, () => {
-                      this.drawBackground()
-                   })
-                   // 导入完成后恢复 Canvas 显示
-                   this.setData({ 
-                       toolsVisible: false,
-                       isCanvasHidden: false
-                   })
+                   this.setData({ backgroundImage: p, toolsVisible: false, isCanvasHidden: false })
               }
               
               // Use crop if available? Editor uses wx.editImage.
@@ -499,30 +531,9 @@ Page({
 
   async executeSave() {
      try {
-         // Calculate export size
-         const currentWidth = this.width * this.dpr
-         const currentHeight = this.height * this.dpr
-         
-         let destWidth = currentWidth
-         let destHeight = currentHeight
-
-         if (destWidth > MAX_EXPORT_WIDTH || destHeight > MAX_EXPORT_HEIGHT) {
-            const scale = Math.min(MAX_EXPORT_WIDTH / destWidth, MAX_EXPORT_HEIGHT / destHeight)
-            destWidth = Math.floor(destWidth * scale)
-            destHeight = Math.floor(destHeight * scale)
-         }
-
-         // Save to temp
-         const tempFile = await new Promise((resolve, reject) => {
-             wx.canvasToTempFilePath({
-                 canvas: this.canvas,
-                 destWidth: destWidth,
-                 destHeight: destHeight,
-                 fileType: 'png',
-                 success: (res) => resolve(res.tempFilePath),
-                 fail: reject
-             })
-         })
+         // 获取包含背景和笔触的合成图片
+         // @ts-ignore
+         const tempFile = await this.getComposedImage()
          
          const openid = this.data.openid || 'unknown'
          const id = this.data.artworkId

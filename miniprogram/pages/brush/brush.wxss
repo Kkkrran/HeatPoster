@@ -49,6 +49,10 @@ page {
   z-index: 1;
 }
 
+.canvas.transparent {
+  background: transparent;
+}
+
 .canvas.hidden {
   display: none;
 }

@@ -23,10 +23,26 @@
 
   <view class="canvas-wrap">
     <view class="canvas-container" style="{{canvasContainerStyle}}">
+      <!-- 常驻背景图（最底层） -->
+      <image 
+        wx:if="{{permanentBackgroundImage}}" 
+        src="{{permanentBackgroundImage}}" 
+        class="canvas-bg permanent-bg" 
+        mode="scaleToFill"
+      ></image>
+      
+      <!-- 临时背景图（中间层） -->
+      <image 
+        wx:if="{{backgroundImage}}" 
+        src="{{backgroundImage}}" 
+        class="canvas-bg temp-bg" 
+        mode="scaleToFill"
+      ></image>
+
       <canvas 
         type="2d" 
         id="brushCanvas" 
-        class="canvas {{isCanvasHidden ? 'hidden' : ''}}"
+        class="canvas {{isCanvasHidden ? 'hidden' : ''}} {{(backgroundImage || permanentBackgroundImage) ? 'transparent' : ''}}"
         bindtouchstart="onTouchStart"
         bindtouchmove="onTouchMove"
         bindtouchend="onTouchEnd"
@@ -76,6 +92,13 @@
      type="2d" 
      id="qrCodeCanvas"
      style="position: fixed; width:200px; height:200px; left:9999px; top:0;"
+  ></canvas>
+
+  <!-- 用于合并导出的 Canvas -->
+  <canvas 
+     type="2d" 
+     id="exportCanvas"
+     style="position: fixed; left: 10000px; top: 0; width: 2048px; height: 2048px;" 
   ></canvas>
 
   <t-toast id="t-toast" />
