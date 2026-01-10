@@ -3,23 +3,15 @@
   <view class="header">
     <view class="title">设置</view>
   </view>
-
-  <view class="section">
-    <view class="card">
-      <view class="card-title">相册导出</view>
-      <view class="card-desc">导出作品到系统相册需要 <text class="em">scope.writePhotosAlbum</text> 授权。</view>
-      <view class="card-actions">
-        <t-button theme="primary" size="small" bindtap="onRequestAlbumAuth">申请授权</t-button>
-        <t-button variant="outline" theme="default" size="small" bindtap="onOpenSetting">去设置</t-button>
-      </view>
-    </view>
-  </view>
   
   <view class="section">
     <t-cell-group>
       <t-cell title="常驻背景选择" description="{{selectedBgFileName || '选择应用常驻背景图片'}}" bindtap="onGoBgSelect" arrow />
       <t-cell title="毛笔练习" description="进入毛笔字练习模式" bindtap="onGoBrush" arrow />
       <t-cell title="相册" description="查看所有热力图作品" bindtap="onGoAlbum" arrow />
+      <t-cell title="纯黑画笔" description="开启后画笔颜色固定为黑色">
+        <t-switch slot="note" value="{{pureBlackBrush}}" bind:change="onPureBlackBrushChange" />
+      </t-cell>
       <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
         <view slot="note">
           <t-button variant="outline" size="small" theme="default" bindtap="onClearCache">清理</t-button>
@@ -29,23 +21,7 @@
       <t-cell title="退出时提示保存" description="若有未保存更改，退出编辑页时进行提示">
         <t-switch slot="note" value="{{exitConfirm}}" bind:change="onExitConfirmChange" />
       </t-cell>
-      <t-cell title="纯黑画笔" description="开启后画笔颜色固定为黑色">
-        <t-switch slot="note" value="{{pureBlackBrush}}" bind:change="onPureBlackBrushChange" />
-      </t-cell>
     </t-cell-group>
-  </view>
-  
-  <view class="section">
-    <view class="card">
-      <view class="card-title">云存储</view>
-      <view class="card-desc">从云存储读取图片文件</view>
-      <view class="card-actions">
-        <t-button theme="primary" size="small" bindtap="onLoadCloudImage">读取云存储</t-button>
-      </view>
-      <view class="cloud-image-container" wx:if="{{cloudImageUrl}}">
-        <image class="cloud-image" src="{{cloudImageUrl}}" mode="aspectFit"></image>
-      </view>
-    </view>
   </view>
 
   <!-- 蓝牙打印机设置 -->
@@ -80,6 +56,30 @@
             <t-icon name="chevron-right" wx:else size="20" color="#86909c" />
           </view>
         </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-title">云存储</view>
+      <view class="card-desc">从云存储读取图片文件</view>
+      <view class="card-actions">
+        <t-button theme="primary" size="small" bindtap="onLoadCloudImage">读取云存储</t-button>
+      </view>
+      <view class="cloud-image-container" wx:if="{{cloudImageUrl}}">
+        <image class="cloud-image" src="{{cloudImageUrl}}" mode="aspectFit"></image>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-title">相册导出</view>
+      <view class="card-desc">导出作品到系统相册需要 <text class="em">scope.writePhotosAlbum</text> 授权。</view>
+      <view class="card-actions">
+        <t-button theme="primary" size="small" bindtap="onRequestAlbumAuth">申请授权</t-button>
+        <t-button variant="outline" theme="default" size="small" bindtap="onOpenSetting">去设置</t-button>
       </view>
     </view>
   </view>

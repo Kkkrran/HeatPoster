@@ -11,12 +11,12 @@
     </view>
   </view>
 
+  <view class="bottom-bar">
+    <t-button variant="outline" theme="default" block bind:tap="onGoSettings">设置</t-button>
+  </view>
+
   <view class="tip-card">
-    <view class="tip-title">小提示</view>
-    <view class="tip-text">按住画布越久颜色越暖；支持多级撤回与重做。</view>
-    <view class="tip-tag">
-      <t-tag theme="primary" variant="light">MVP</t-tag>
-    </view>
+    <view class="tip-title">按住画布越久颜色越暖；支持多级撤回与重做。</view>
   </view>
 
   <scroll-view class="list" scroll-y>
@@ -40,10 +40,6 @@
 
     <view class="footer-space"></view>
   </scroll-view>
-
-  <view class="bottom-bar">
-    <t-button variant="outline" theme="default" block bind:tap="onGoSettings">设置</t-button>
-  </view>
 
   <t-action-sheet 
     visible="{{moreVisible}}" 
