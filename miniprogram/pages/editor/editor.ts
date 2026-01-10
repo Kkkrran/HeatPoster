@@ -127,7 +127,6 @@ Page({
 
   updateExitConfirmState() {
     let exitConfirm = wx.getStorageSync('editor_exit_confirm')
-    if (exitConfirm === '') exitConfirm = true // 默认为开启
 
     const hasUnsavedChanges = this.data.hasUnsavedChanges
     if (exitConfirm && hasUnsavedChanges) {

@@ -19,7 +19,7 @@ const STORAGE_KEYS = {
 
 Component({
   data: {
-    exitConfirm: true,
+    exitConfirm: false,
     maxUndoSteps: 10,
     pureBlackBrush: false,
     limitDialogVisible: false,
@@ -35,7 +35,7 @@ Component({
     attached() {
       const self = this as any
       let exitConfirm = wx.getStorageSync(STORAGE_KEYS.EXIT_CONFIRM)
-      if (exitConfirm === '') exitConfirm = true // 默认为开启
+      if (exitConfirm === '') exitConfirm = false // 默认为关闭
       
       const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 10
       
@@ -94,7 +94,7 @@ Component({
       const self = this as any
       // 重新加载退出确认设置
       let exitConfirm = wx.getStorageSync('editor_exit_confirm')
-      if (exitConfirm === '') exitConfirm = true // 默认为开启
+      if (exitConfirm === '') exitConfirm = false // 默认为关闭
 
       // 重新加载撤销步数限制设置
       const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
