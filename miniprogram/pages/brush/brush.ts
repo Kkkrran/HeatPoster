@@ -1,5 +1,8 @@
 import drawQrcode from '../../SUPVANAPIT50PRO/weapp.qrcode.esm.js'
 
+const MAX_EXPORT_WIDTH = 1169
+const MAX_EXPORT_HEIGHT = 1559
+
 Page({
   data: {
     toolsVisible: false,
@@ -496,10 +499,25 @@ Page({
 
   async executeSave() {
      try {
+         // Calculate export size
+         const currentWidth = this.width * this.dpr
+         const currentHeight = this.height * this.dpr
+         
+         let destWidth = currentWidth
+         let destHeight = currentHeight
+
+         if (destWidth > MAX_EXPORT_WIDTH || destHeight > MAX_EXPORT_HEIGHT) {
+            const scale = Math.min(MAX_EXPORT_WIDTH / destWidth, MAX_EXPORT_HEIGHT / destHeight)
+            destWidth = Math.floor(destWidth * scale)
+            destHeight = Math.floor(destHeight * scale)
+         }
+
          // Save to temp
          const tempFile = await new Promise((resolve, reject) => {
              wx.canvasToTempFilePath({
                  canvas: this.canvas,
+                 destWidth: destWidth,
+                 destHeight: destHeight,
                  fileType: 'png',
                  success: (res) => resolve(res.tempFilePath),
                  fail: reject

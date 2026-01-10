@@ -15,6 +15,9 @@ interface HeatPoint {
 // 定义笔画结构（已使用，但TypeScript可能检测不到）
 // type Stroke = HeatPoint[]
 
+const MAX_EXPORT_WIDTH = 1169
+const MAX_EXPORT_HEIGHT = 1559
+
 const BRUSH_RADIUS_RANGE = { min: 6, max: 60 }
 const BRUSH_CONFIG = {
   normal: { radius: 40, heatRate: 0.6, heatMin: 0.2, heatMax: 3 },
@@ -997,10 +1000,22 @@ Page({
       offscreenCtx.drawImage(tempHeatmapCanvas, 0, 0, width, height)
     }
 
+    // Calculate export size
+    let destWidth = width
+    let destHeight = height
+
+    if (destWidth > MAX_EXPORT_WIDTH || destHeight > MAX_EXPORT_HEIGHT) {
+      const scale = Math.min(MAX_EXPORT_WIDTH / destWidth, MAX_EXPORT_HEIGHT / destHeight)
+      destWidth = Math.floor(destWidth * scale)
+      destHeight = Math.floor(destHeight * scale)
+    }
+
     // 6. 导出合成后的图片
     return new Promise((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas: offscreenCanvas,
+        destWidth: destWidth,
+        destHeight: destHeight,
         fileType: 'png',
         quality: 1,
         success: (res) => resolve(res.tempFilePath),
