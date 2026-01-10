@@ -14,12 +14,7 @@ App<IAppOption>({
     logs.unshift(Date.now())
     wx.setStorageSync('logs', logs)
 
-    const fs = wx.getFileSystemManager()
-    const root = wx.env.USER_DATA_PATH
-    const logDir = `${root}/miniprogramLog`
-    try { fs.accessSync(logDir) } catch { try { fs.mkdirSync(logDir, true) } catch (_) {} }
-    const log2 = `${logDir}/log2`
-    try { fs.accessSync(log2) } catch { try { fs.writeFileSync(log2, '', 'utf8') } catch (_) {} }
+    // 日志文件操作已移除，避免文件系统错误
 
     // 登录
     wx.login({

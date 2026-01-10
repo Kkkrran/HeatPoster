@@ -55,11 +55,29 @@
     </view>
   </view>
 
-  <!-- 隐藏的打印Canvas -->
-  <canvas 
-    canvas-id="printCanvasWx" 
-    style="position: fixed; top: -9999px; width: 1px; height: 1px;"
-  ></canvas>
+  <!-- 隐藏的打印Canvas（严格按照SDK文档3.6节配置） -->
+  <view style="position: fixed; top: 9999px;">
+    <!-- 绘制内容 -->
+    <view>
+      <canvas 
+        width='{{templateWidth * pixelRatio}}' 
+        height='{{templateHeight * pixelRatio}}' 
+        style="width:{{templateWidth}}px;height:{{templateHeight}}px" 
+        canvas-id="Canvas" 
+        id="Canvas">
+      </canvas>
+    </view>
+    <!-- 绘制条形码（可选，当前未使用） -->
+    <view>
+      <canvas 
+        type="2d" 
+        style="width:{{barCodeWidth}}px;height:{{barCodeHeight}}px" 
+        class="ls-barcode-canvas" 
+        canvas-id="barCodels" 
+        id="barCodels">
+      </canvas>
+    </view>
+  </view>
 
   <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
     <view class="sheet">
@@ -122,7 +140,7 @@
               <t-input 
                 type="digit" 
                 value="{{printWidth}}" 
-                placeholder="50"
+                placeholder="70"
                 bind:change="onPrintWidthChange"
               />
             </view>
@@ -131,7 +149,7 @@
               <t-input 
                 type="digit" 
                 value="{{printHeight}}" 
-                placeholder="70"
+                placeholder="100"
                 bind:change="onPrintHeightChange"
               />
             </view>
@@ -151,12 +169,12 @@
 
         <!-- 打印密度 -->
         <view class="setting-group">
-          <view class="setting-label">打印密度（1-15）</view>
+          <view class="setting-label">打印密度（1-9，默认3）</view>
           <view class="slider-horizontal-box">
             <t-slider 
               value="{{printDensity}}" 
               min="1" 
-              max="15" 
+              max="9" 
               step="1" 
               bind:change="onPrintDensityChange"
             />
@@ -166,12 +184,12 @@
 
         <!-- 打印速度 -->
         <view class="setting-group">
-          <view class="setting-label">打印速度（1-100）</view>
+          <view class="setting-label">打印速度（15-60，默认30）</view>
           <view class="slider-horizontal-box">
             <t-slider 
               value="{{printSpeed}}" 
-              min="1" 
-              max="100" 
+              min="15" 
+              max="60" 
               step="1" 
               bind:change="onPrintSpeedChange"
             />
@@ -193,16 +211,6 @@
               bindtap="onSetRotate"
               data-value="2"
             >90°</view>
-            <view 
-              class="rotate-option {{printRotate == 3 ? 'active' : ''}}"
-              bindtap="onSetRotate"
-              data-value="3"
-            >180°</view>
-            <view 
-              class="rotate-option {{printRotate == 4 ? 'active' : ''}}"
-              bindtap="onSetRotate"
-              data-value="4"
-            >270°</view>
           </view>
         </view>
 
@@ -214,17 +222,17 @@
               class="paper-type-option {{printPaperType == 1 ? 'active' : ''}}"
               bindtap="onSetPaperType"
               data-value="1"
-            >连续纸</view>
+            >间隙</view>
             <view 
               class="paper-type-option {{printPaperType == 2 ? 'active' : ''}}"
               bindtap="onSetPaperType"
               data-value="2"
-            >间隙纸</view>
+            >普通黑标</view>
             <view 
               class="paper-type-option {{printPaperType == 3 ? 'active' : ''}}"
               bindtap="onSetPaperType"
               data-value="3"
-            >黑标纸</view>
+            >连续</view>
           </view>
         </view>
 

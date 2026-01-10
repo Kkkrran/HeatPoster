@@ -1,8 +1,7 @@
 // miniprogram/pages/editor/editor.ts
 
-// 导入打印机SDK
-import bleToothManage from '../../SUPVANAPIT50PRO/BLEToothManage.js'
-import constants from '../../SUPVANAPIT50PRO/Constants.js'
+// 导入打印管理模块
+import { PrintManager, DEFAULT_PRINT_SETTINGS } from './printManager'
 
 // 定义笔触点结构
 interface HeatPoint {
@@ -34,19 +33,22 @@ Page({
 
     hasUnsavedChanges: false,
     maxUndoSteps: 10,
-    // 打印相关
+    // 打印相关（严格按照SDK文档3.7节配置）
     connectedDevice: null as any,
-    printCanvasCtx: null as any,
+    canvasText: null as any, // 文本canvas（与示例保持一致）
+    canvasBarCode: null as any, // 条码canvas（与示例保持一致）
     printSettingsVisible: false, // 打印参数设置弹窗可见性
-    // 打印参数（默认值）
-    printWidth: 50,      // 纸张宽度（mm）
-    printHeight: 70,     // 纸张高度（mm）
-    printCopies: 1,      // 打印份数
-    printDensity: 6,    // 打印密度（1-15）
-    printSpeed: 60,     // 打印速度（1-100）
-    printRotate: 1,      // 旋转（1-4）
-    printPaperType: 1,  // 纸张类型（1-3）
-    printGap: 3,        // 间隙（mm）
+    // Canvas 相关（SDK文档3.7节）
+    templateWidth: 400,      // 内容画布宽度（默认值400）
+    templateHeight: 240,      // 内容画布高度（默认值240）
+    barCodeWidth: 214,        // 条形码画布宽度（默认值214）
+    barCodeHeight: 72,        // 条形码画布高度（默认值72）
+    qrCodeWidth: 20,          // 二维码画布宽度（默认值20）
+    qrCodeHeight: 20,         // 二维码画布高度（默认值20）
+    pixelRatio: 1,            // 像素比（默认值1）
+    printNum: 0,              // 当前打印的份数
+    // 打印参数（默认值从 printManager 导入）
+    ...DEFAULT_PRINT_SETTINGS,
   },
 
   async onLoad(options: any) {
@@ -56,15 +58,26 @@ Page({
       redoStack: [],
       currentStroke: [], // ... existing ...
       needsRender: false,
-      renderLoopId: 0
+      renderLoopId: 0,
+      printManager: new PrintManager(this) // 初始化打印管理器
     })
     // 先加载常驻背景，然后再初始化画布（这样可以根据常驻背景的比例调整画布）
     await this.loadPermanentBackground()
     // 等待画布初始化完成
     await this.initCanvas()
-    this.initPrintCanvas()
-    this.checkPrinterConnection()
-    this.loadPrintSettings() // 加载保存的打印参数
+    
+    // 使用打印管理器初始化（严格按照SDK文档3.8节）
+    // 获取像素比值
+    const systemInfo = wx.getSystemInfoSync()
+    const pixelRatio = systemInfo.pixelRatio || 1
+    this.setData({ pixelRatio })
+    
+    // 初始化打印 Canvas（SDK文档3.8节）
+    const self = this as any
+    self.printManager.initPrintCanvas()
+    self.printManager.checkPrinterConnection()
+    self.printManager.loadPrintSettings() // 加载保存的打印参数
+    
     this.getOpenId()
     
     if (options && options.id) {
@@ -86,7 +99,10 @@ Page({
     this.setData({ maxUndoSteps })
     this.updateExitConfirmState()
     // 每次显示页面时检查打印机连接状态
-    this.checkPrinterConnection()
+    const self = this as any
+    if (self.printManager) {
+      self.printManager.checkPrinterConnection()
+    }
     // 重新加载常驻背景（可能用户在设置页面修改了）
     this.loadPermanentBackground()
   },
@@ -854,56 +870,34 @@ Page({
   },
 
   // ========== 打印功能 ==========
-
-  // 检查打印机连接状态
-  checkPrinterConnection() {
-    const savedDevice = wx.getStorageSync('connected_printer_device')
-    if (savedDevice) {
-      this.setData({ connectedDevice: savedDevice })
-    } else {
-      this.setData({ connectedDevice: null })
-    }
-  },
-
-  // 初始化打印Canvas
-  initPrintCanvas() {
-    try {
-      // 使用 createCanvasContext 创建传统 Canvas 上下文（与 SDK 示例保持一致）
-      const ctx = wx.createCanvasContext('printCanvasWx', this as any)
-      if (ctx) {
-        this.setData({ printCanvasCtx: ctx })
-        console.log('打印Canvas初始化成功')
-      }
-    } catch (error) {
-      console.error('打印Canvas初始化失败:', error)
-    }
-  },
+  // 打印相关逻辑已拆分到 printManager.ts 中
 
   // 点击打印按钮 - 显示参数设置弹窗
   onPrint() {
     const self = this as any
 
-    // 检查是否已连接打印机
-    if (!this.data.connectedDevice) {
-      wx.showModal({
-        title: '未连接打印机',
-        content: '未连接打印机，请在设置界面连接',
-        showCancel: true,
-        confirmText: '去设置',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.navigateTo({ url: '/pages/settings/settings' })
-          }
+    // 使用打印管理器检查是否可以打印
+    if (self.printManager) {
+      const checkResult = self.printManager.canPrint()
+      if (!checkResult.canPrint) {
+        if (checkResult.message?.includes('未连接打印机')) {
+          wx.showModal({
+            title: '未连接打印机',
+            content: checkResult.message,
+            showCancel: true,
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: (res) => {
+              if (res.confirm) {
+                wx.navigateTo({ url: '/pages/settings/settings' })
+              }
+            }
+          })
+        } else {
+          this.toast(checkResult.message || '无法打印', 'warning')
         }
-      })
-      return
-    }
-
-    // 检查画布是否有内容
-    if (!self.strokes || self.strokes.length === 0) {
-      this.toast('画布为空，无法打印', 'warning')
-      return
+        return
+      }
     }
 
     // 显示打印参数设置弹窗
@@ -912,35 +906,27 @@ Page({
 
   // 加载保存的打印参数（如果没有则使用默认值）
   loadPrintSettings() {
-    const saved = wx.getStorageSync('print_settings')
-    if (saved) {
-      // 如果有保存的参数，使用保存的值
-      this.setData({
-        printWidth: saved.printWidth || 50,
-        printHeight: saved.printHeight || 70,
-        printCopies: saved.printCopies || 1,
-        printDensity: saved.printDensity || 6,
-        printSpeed: saved.printSpeed || 60,
-        printRotate: saved.printRotate || 1,
-        printPaperType: saved.printPaperType || 1,
-        printGap: saved.printGap || 3,
-      })
+    const self = this as any
+    if (self.printManager) {
+      self.printManager.loadPrintSettings()
     }
-    // 如果没有保存的参数，使用 data 中定义的默认值
   },
 
   // 保存打印参数
   savePrintSettings() {
-    wx.setStorageSync('print_settings', {
-      printWidth: this.data.printWidth,
-      printHeight: this.data.printHeight,
-      printCopies: this.data.printCopies,
-      printDensity: this.data.printDensity,
-      printSpeed: this.data.printSpeed,
-      printRotate: this.data.printRotate,
-      printPaperType: this.data.printPaperType,
-      printGap: this.data.printGap,
-    })
+    const self = this as any
+    if (self.printManager) {
+      self.printManager.savePrintSettings({
+        printWidth: this.data.printWidth,
+        printHeight: this.data.printHeight,
+        printCopies: this.data.printCopies,
+        printDensity: this.data.printDensity,
+        printSpeed: this.data.printSpeed,
+        printRotate: this.data.printRotate,
+        printPaperType: this.data.printPaperType,
+        printGap: this.data.printGap,
+      })
+    }
   },
 
   // 关闭打印参数设置弹窗
@@ -966,18 +952,21 @@ Page({
   },
 
   onPrintDensityChange(e: any) {
-    const value = parseInt(e.detail.value) || 6
-    this.setData({ printDensity: Math.max(1, Math.min(15, value)) })
+    const value = parseInt(e.detail.value) || 3
+    // SDK 文档：浓度范围 1-9，默认3
+    this.setData({ printDensity: Math.max(1, Math.min(9, value)) })
   },
 
   onPrintSpeedChange(e: any) {
-    const value = parseInt(e.detail.value) || 60
-    this.setData({ printSpeed: Math.max(1, Math.min(100, value)) })
+    const value = parseInt(e.detail.value) || 30
+    // SDK 文档：打印速度范围 15-60，默认30
+    this.setData({ printSpeed: Math.max(15, Math.min(60, value)) })
   },
 
   onPrintRotateChange(e: any) {
     const value = parseInt(e.detail.value) || 1
-    this.setData({ printRotate: Math.max(1, Math.min(4, value)) })
+    // 旋转角度只支持 1（0度）或 2（90度）
+    this.setData({ printRotate: value === 1 || value === 2 ? value : 1 })
   },
 
   onPrintPaperTypeChange(e: any) {
@@ -987,7 +976,8 @@ Page({
 
   onPrintGapChange(e: any) {
     const value = parseFloat(e.detail?.value || e.detail || String(this.data.printGap)) || this.data.printGap
-    this.setData({ printGap: value })
+    // SDK 文档：纸张间隙范围 0-8，默认3
+    this.setData({ printGap: Math.max(0, Math.min(8, value)) })
   },
 
   // 设置旋转角度
@@ -1009,89 +999,17 @@ Page({
 
   // 确认打印 - 执行实际打印操作
   async onConfirmPrint() {
-    // 检查打印Canvas是否初始化
-    if (!this.data.printCanvasCtx) {
-      this.toast('打印Canvas未初始化', 'error')
-      return
-    }
-
-    // 保存当前参数设置
-    this.savePrintSettings()
-
+    const self = this as any
+    
     // 关闭参数设置弹窗
     this.setData({ printSettingsVisible: false })
 
     try {
-      this.toast('正在生成图片...', 'loading')
-      
-      // 生成合成图片
-      const composedPath = await this.getComposedImagePath()
-
-      // 询问用户是否先保存到相册或直接打印
-      try {
-        const modalRes = await new Promise<WechatMiniprogram.ShowModalSuccessCallbackResult>((resolve) => {
-          wx.showModal({
-            title: '导出或打印',
-            content: '是否先将合成图片保存到相册再打印？（确定：保存并打印，取消：直接打印）',
-            confirmText: '保存并打印',
-            cancelText: '直接打印',
-            success: resolve,
-            fail: () => resolve({ confirm: false, cancel: true } as any)
-          })
-        })
-
-        if (modalRes.confirm) {
-          await this.saveComposedToAlbum(composedPath)
-        }
-      } catch (err) {
-        console.error('保存并打印流程出错', err)
-      }
-
-      // 使用用户设置的打印参数
-      const PageImageObject = [{
-        "Width": String(this.data.printWidth),
-        "Height": String(this.data.printHeight),
-        "Rotate": String(this.data.printRotate),
-        "Copies": String(this.data.printCopies),
-        "Density": String(this.data.printDensity),
-        "HorizontalNum": "0",
-        "VerticalNum": "0",
-        "PaperType": String(this.data.printPaperType),
-        "Gap": String(this.data.printGap),
-        "DeviceSn": this.data.connectedDevice.deviceId || this.data.connectedDevice.name || '',
-        "ImageUrl": composedPath,
-        "ImageWidth": String(this.data.printWidth), // 图片宽（单位mm）
-        "ImageHeight": String(this.data.printHeight), // 图片高（单位mm）
-        "Speed": String(this.data.printSpeed),
-      }]
-
-      this.toast('正在打印...', 'loading')
-
-      // 调用打印SDK
-      bleToothManage.doPrintImage(
-        this.data.printCanvasCtx,
-        PageImageObject,
-        (res: any) => {
-          console.log('打印回调', res)
-          
-          if (res.ResultCode == constants.globalResultCode.ResultCode100) {
-            // 打印进度回调
-            const resultValue = res.ResultValue
-            console.log('打印尺寸:', resultValue.width, resultValue.height)
-          } else if (res.ResultCode == constants.globalResultCode.ResultCodeSuccess) {
-            // 打印完成
-            this.toast('打印完成', 'success')
-          } else {
-            this.toast('打印失败', 'error')
-          }
-        }
-      ).catch((error: any) => {
-        console.error('打印失败', error)
-        this.toast('打印失败', 'error')
-      })
+      // 使用打印管理器执行打印
+      await self.printManager.print('', () => this.getComposedImagePath())
     } catch (error) {
-      console.error('生成图片失败', error)
-      this.toast('生成图片失败', 'error')
+      console.error('打印失败', error)
+      // 错误已在 printManager 中处理
     }
   },
 
