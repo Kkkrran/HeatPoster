@@ -68,10 +68,22 @@ Component({
   methods: {
     loadSelectedBackground() {
       const self = this as any
-      const selectedBg = wx.getStorageSync('selected_background')
+      let selectedBg = wx.getStorageSync('selected_background')
+
+      // 如果没有缓存，默认使用 "默认背景" (bglocal.png)
+      if (!selectedBg) {
+        selectedBg = { name: '默认背景' }
+      }
+
       if (selectedBg && selectedBg.name) {
         // 从 name 字段生成文件名（name 是 "bg1" 格式，需要加上 ".png"）
-        const fileName = `${selectedBg.name}.png`
+        // 如果是本地背景，name 为 "默认背景"，特殊处理一下显示
+        let fileName = ''
+        if (selectedBg.name === '默认背景') {
+          fileName = 'bglocal.png'
+        } else {
+          fileName = `${selectedBg.name}.png`
+        }
         self.setData({ selectedBgFileName: fileName })
       } else {
         self.setData({ selectedBgFileName: '' })

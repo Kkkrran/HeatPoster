@@ -165,7 +165,30 @@ Page({
   // 加载常驻背景
   async loadPermanentBackground() {
     try {
-      const selectedBg = wx.getStorageSync('selected_background')
+      let selectedBg = wx.getStorageSync('selected_background')
+
+      // 如果没有缓存，则使用默认背景 (bglocal.png)
+      if (!selectedBg) {
+        selectedBg = {
+           name: '默认背景',
+           tempFilePath: '/images/bglocal.png'
+        }
+        // 对于本地默认背景，尝试获取信息
+        try {
+           const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
+             wx.getImageInfo({ 
+               src: selectedBg.tempFilePath,
+               success: resolve,
+               fail: reject
+             })
+           })
+           selectedBg.aspectRatio = imageInfo.width / imageInfo.height
+        } catch(e) {
+           console.warn('Cannot load default bg info', e)
+           // 即使获取信息失败，也要尝试使用默认背景，只是无法精确控制比例
+        }
+      }
+
       if (selectedBg && selectedBg.tempFilePath) {
         // 如果有保存的常驻背景，加载它
         this.setData({ 
@@ -189,11 +212,16 @@ Page({
             })
             const aspectRatio = imageInfo.width / imageInfo.height
             this.setData({ permanentBackgroundAspectRatio: aspectRatio })
-            // 更新存储中的宽高比信息
-            wx.setStorageSync('selected_background', {
-              ...selectedBg,
-              aspectRatio
-            })
+            // 更新存储中的宽高比信息（仅当存在缓存记录时）
+            // 注意：如果是我们刚才构造的临时对象，这里可能不需要setStorage，
+            // 但如果用户确实需要记住这个默认状态，可以在bgselect逻辑中更早地固化。
+            // 这里为了安全起见，只更新内存中的状态，或者只更新已存在的 selected_background
+            if (wx.getStorageSync('selected_background')) {
+                wx.setStorageSync('selected_background', {
+                ...selectedBg,
+                aspectRatio
+                })
+            }
           } catch (err) {
             console.warn('获取常驻背景图片信息失败', err)
           }

@@ -142,12 +142,15 @@ Component({
     },
 
     onSelectNoBg() {
-      // 清除常驻背景
+      // 清除常驻背景，这将导致恢复默认背景 (bglocal.png)
       wx.removeStorageSync('selected_background')
+
+      // 重新触发加载逻辑，确保缓存被重置为默认背景
+      this.loadBackgrounds()
 
       // 显示选择成功的提示
       wx.showToast({
-        title: '已选择无背景',
+        title: '已重置为默认背景',
         icon: 'success',
         duration: 1500,
       })

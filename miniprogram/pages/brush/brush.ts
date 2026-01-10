@@ -80,7 +80,24 @@ Page({
 
   async loadPermanentBackground() {
     try {
-      const selectedBg = wx.getStorageSync('selected_background')
+      let selectedBg = wx.getStorageSync('selected_background')
+      
+      // 如果没有缓存，则使用默认背景
+      if (!selectedBg) {
+        selectedBg = {
+           name: '默认背景',
+           tempFilePath: '/images/bglocal.png'
+        }
+        // 对于本地默认背景，尝试获取信息
+        try {
+           const imageInfo = await wx.getImageInfo({ src: selectedBg.tempFilePath })
+           selectedBg.aspectRatio = imageInfo.width / imageInfo.height
+        } catch(e) {
+           // 如果获取信息也失败，可能默认背景图也不存在，则不设置
+           console.warn('Cannot load default bg info', e)
+        }
+      }
+
       if (selectedBg && selectedBg.tempFilePath) {
         this.setData({ 
           permanentBackgroundImage: selectedBg.tempFilePath 
@@ -93,7 +110,16 @@ Page({
             const ar = imageInfo.width / imageInfo.height
             this.setData({ permanentBackgroundAspectRatio: ar })
         }
+      } else {
+        // 如果依然没有背景（例如默认背景图加载失败），确保清空状态
+         this.setData({ 
+          permanentBackgroundImage: '',
+          permanentBackgroundAspectRatio: undefined 
+        })
       }
+      
+      // 重新布局 Canvas
+      this.initCanvas()
     } catch (err) {
       console.error('loadPermanentBackground fail', err)
     }

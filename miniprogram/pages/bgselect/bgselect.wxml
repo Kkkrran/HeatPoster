@@ -7,13 +7,6 @@
 
   <scroll-view class="content" scroll-y>
     <view class="grid">
-      <!-- 无背景选项 -->
-      <view class="grid-item no-bg-item" bindtap="onSelectNoBg">
-        <view class="bg-image-wrapper no-bg-wrapper">
-          <view class="no-bg-icon">无背景</view>
-        </view>
-        <view class="bg-label">无背景</view>
-      </view>
       
       <!-- 背景图片选项 -->
       <view class="grid-item" wx:for="{{backgrounds}}" wx:key="index" bindtap="onSelectBg" data-index="{{index}}">
