@@ -11,15 +11,14 @@
     </view>
   </view>
 
-  <view class="bottom-bar">
-    <t-button variant="outline" theme="default" block bind:tap="onGoSettings">设置</t-button>
-  </view>
-
   <view class="tip-card">
     <view class="tip-title">按住画布越久颜色越暖；支持多级撤回与重做。</view>
   </view>
 
-  <scroll-view class="list" scroll-y>
+  <view class="bottom-bar">
+    <t-button variant="outline" theme="default" bind:tap="onGoBrush">毛笔</t-button>
+    <t-button variant="outline" theme="default" bind:tap="onGoSettings">设置</t-button>
+  </view>  <scroll-view class="list" scroll-y>
     <block wx:if="{{artworks.length === 0}}">
       <view class="empty-wrap">
         <t-empty description="暂无作品，点击右上角新建" />

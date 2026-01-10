@@ -264,5 +264,9 @@ Component({
       wx.navigateTo({ url: '/pages/settings/settings' })
     },
 
+    onGoBrush() {
+      wx.navigateTo({ url: '/pages/brush/brush' })
+    },
+
   },
 })

@@ -61,4 +61,6 @@
 
 .bottom-bar {
   padding: 0 32rpx 32rpx;
+  display: flex;
+  justify-content: space-between;
 }
