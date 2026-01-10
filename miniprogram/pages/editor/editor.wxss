@@ -109,6 +109,56 @@ page {
   color: #ffffff;
 }
 
+/* 二维码弹出层样式 */
+.qrcode-popup {
+  position: absolute;
+  top: 120%;  /* 按钮下方 */
+  right: 0;
+  width: 240rpx;
+  background: #ffffff;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2000; /* 比 mask 高, 也要比 canvas 高 */
+}
+
+.qrcode-popup::before {
+  content: '';
+  position: absolute;
+  top: -10rpx;
+  right: 30rpx;
+  border-left: 10rpx solid transparent;
+  border-right: 10rpx solid transparent;
+  border-bottom: 10rpx solid #ffffff;
+}
+
+.qrcode-img {
+  width: 200rpx;
+  height: 200rpx;
+  display: block;
+}
+
+.qrcode-tip {
+  font-size: 20rpx;
+  color: #999;
+  margin-top: 8rpx;
+  text-align: center;
+}
+
+/* 全局点击遮罩 */
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999; /* 覆盖页面内容，但在 二维码 下方 */
+  background: transparent;
+}
+
 
 
 .sheet {

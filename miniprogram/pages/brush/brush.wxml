@@ -7,9 +7,19 @@
     <view class="circle-btn" bindtap="toggleTools">工具</view>
 
     <view class="top-right">
-      <view class="rect-btn primary" bindtap="onSave">保存</view>
+      <view class="rect-btn primary" bindtap="onSave" style="position: relative;">
+        保存
+        <!-- 二维码浮层 -->
+        <view class="qrcode-popup" wx:if="{{qrCodeUrl}}" catchtap="preventBubble">
+          <image class="qrcode-img" src="{{qrCodeUrl}}" show-menu-by-longpress mode="aspectFit"/>
+          <view class="qrcode-tip">微信扫码，再浏览器打开</view>
+        </view>
+      </view>
     </view>
   </view>
+
+  <!-- 全局点击遮罩，用于点击空白处关闭二维码 -->
+  <view class="mask" wx:if="{{qrCodeUrl}}" bindtap="onCloseQrCode" catchtouchmove="preventScroll"></view>
 
   <view class="canvas-wrap">
     <view class="canvas-container" style="{{canvasContainerStyle}}">
@@ -61,6 +71,12 @@
 
     </view>
   </t-popup>
+
+  <canvas 
+     type="2d" 
+     id="qrCodeCanvas"
+     style="position: fixed; width:200px; height:200px; left:9999px; top:0;"
+  ></canvas>
 
   <t-toast id="t-toast" />
 </view>

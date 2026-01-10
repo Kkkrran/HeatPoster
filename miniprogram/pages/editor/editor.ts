@@ -2,6 +2,7 @@
 
 // 导入打印管理模块
 import { PrintManager, DEFAULT_PRINT_SETTINGS } from './printManager'
+import drawQrcode from '../../SUPVANAPIT50PRO/weapp.qrcode.esm.js'
 
 // 定义笔触点结构
 interface HeatPoint {
@@ -36,6 +37,7 @@ Page({
     canRedo: false,
     openid: '',
     snapshotUrl: '',
+    qrCodeUrl: '', // 下载链接的二维码图片路径
     isCanvasHidden: false,
     backgroundImage: '', // 临时背景图
     permanentBackgroundImage: '', // 常驻背景图
@@ -650,7 +652,42 @@ Page({
     this.toast('画布已清空')
   },
 
-  async onSave() {
+  onSave() {
+    this.setData({ toolsVisible: false })
+    
+    // 为了防止 Canvas（原生组件层级高）挡住二维码
+    // 我们在点击保存时，先生成一张 Canvas 的快照图片
+    // 然后隐藏 Canvas，显示这张快照图片
+    // 这样接下来的二维码弹窗（普普通通的 View/Image）就能覆盖在快照图片上了
+    
+    // 只有当需要显示二维码时（保存成功后）这个策略发挥最大作用
+    // 但因为从点击保存到保存成功有一段时间，我们現在就切换也无妨，体验更流畅（界面静止）
+    
+    const self = this as any
+    if (self.canvas) {
+        wx.canvasToTempFilePath({
+            canvas: self.canvas,
+            success: (res) => {
+                this.setData({
+                    snapshotUrl: res.tempFilePath,
+                    isCanvasHidden: true // 隐藏 Canvas，显示快照
+                })
+                // 继续执行实际的保存逻辑
+                this.saveArtwork()
+            },
+            fail: (err) => {
+                console.error('Snapshot failed', err)
+                // 即使截图失败，也直接保存，不影响核心流程
+                this.saveArtwork()
+            }
+        })
+    } else {
+         this.saveArtwork()
+    }
+  },
+  
+  // 實際執行保存的邏輯，將被 onSave 調用
+  async saveArtwork() {
     const self = this as any
     if (self.strokes.length === 0) {
       this.toast('画布为空', 'warning')
@@ -734,6 +771,12 @@ Page({
           const composedPathLocal = await this.getComposedImagePath()
           await this.saveComposedToAlbum(composedPathLocal)
         }
+        
+        // 保存成功后显示下载二维码
+        if (thumbnailFileId) {
+             this.showDownloadQrCode(thumbnailFileId)
+        }
+
       } catch (err) {
         console.error('导出到相册失败', err)
       }
@@ -1083,4 +1126,85 @@ Page({
     }
   },
 
+  // 真正的生成二维码实现
+  async drawQrCodeToPath(url: string): Promise<string> {
+     return new Promise((resolve, reject) => {
+         const query = this.createSelectorQuery()
+         // 查找我们在 wxml 中添加的隐藏 canvas
+         query.select('#qrCodeCanvas')
+            .fields({ node: true, size: true })
+            .exec(async (res) => {
+                if (!res[0] || !res[0].node) {
+                    console.error('Canvas #qrCodeCanvas not found')
+                    reject('Canvas not found')
+                    return
+                }
+                const canvas = res[0].node
+                const ctx = canvas.getContext('2d')
+                const dpr = wx.getSystemInfoSync().pixelRatio || 1
+                
+                const width = res[0].width
+                const height = res[0].height
+                
+                canvas.width = width * dpr
+                canvas.height = height * dpr
+                ctx.scale(dpr, dpr)
+                
+                // 清空
+                ctx.clearRect(0, 0, width, height)
+                
+                // 绘制二维码
+                drawQrcode({
+                    canvas: canvas,
+                    canvasId: 'qrCodeCanvas',
+                    width: width,
+                    height: height,
+                    padding: 0,
+                    text: url,
+                    background: '#ffffff',
+                    foreground: '#000000',
+                })
+                
+                // 导出为临时路径
+                setTimeout(() => {
+                    wx.canvasToTempFilePath({
+                        canvas: canvas,
+                        success: (res) => {
+                            resolve(res.tempFilePath)
+                        },
+                        fail: reject
+                    })
+                }, 200)
+            })
+     })
+  },
+
+  async showDownloadQrCode(fileID: string) {
+       try {
+           const res = await wx.cloud.getTempFileURL({ fileList: [fileID] })
+           if (!res.fileList || !res.fileList[0].tempFileURL) return
+           
+           const url = res.fileList[0].tempFileURL
+           console.log('Generating QR code for:', url)
+           const qrPath = await this.drawQrCodeToPath(url)
+           
+           this.setData({ qrCodeUrl: qrPath })
+       } catch (e) {
+           console.error('Show QR Code failed', e)
+       }
+  },
+
+  preventBubble() {},
+  
+  preventScroll() {},
+
+  onCloseQrCode() {
+      // 关闭二维码时，我们要把Canvas恢复显示
+      this.setData({ 
+          qrCodeUrl: '',
+          // 如果之前因为显示二维码而隐藏了Canvas，现在恢复它
+          // 注意：如果还有其他弹窗（如工具栏），需根据逻辑判断，目前只处理二维码关闭
+          isCanvasHidden: false 
+      })
+  },
 })

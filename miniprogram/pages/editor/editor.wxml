@@ -11,9 +11,19 @@
 
     <view class="top-right">
       <view class="rect-btn" bindtap="onPrint">打印</view>
-      <view class="rect-btn primary" bindtap="onSave">保存</view>
+      <view class="rect-btn primary" bindtap="onSave" style="position: relative;">
+        保存
+        <!-- 二维码浮层 -->
+        <view class="qrcode-popup" wx:if="{{qrCodeUrl}}" catchtap="preventBubble">
+          <image class="qrcode-img" src="{{qrCodeUrl}}" show-menu-by-longpress mode="aspectFit"/>
+          <view class="qrcode-tip">微信扫码，再浏览器打开</view>
+        </view>
+      </view>
     </view>
   </view>
+
+  <!-- 全局点击遮罩，用于点击空白处关闭二维码 -->
+  <view class="mask" wx:if="{{qrCodeUrl}}" bindtap="onCloseQrCode" catchtouchmove="preventScroll"></view>
 
   <view class="canvas-wrap">
     <view class="canvas-container" style="{{canvasContainerStyle}}">
@@ -76,6 +86,10 @@
         canvas-id="barCodels" 
         id="barCodels">
       </canvas>
+    </view>
+    <!-- 用于生成二维码的隐藏 Canvas -->
+    <view>
+        <canvas type="2d" id="qrCodeCanvas" style="width: 200px; height: 200px;"></canvas>
     </view>
   </view>
 
