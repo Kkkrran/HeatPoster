@@ -50,9 +50,7 @@ Page({
     await this.getOpenId()
     await this.loadPermanentBackground()
     // Wait for view to stabilize?
-    setTimeout(() => {
-        this.initCanvas()
-    }, 100)
+    this.initCanvas()
   },
 
   onShow() {
