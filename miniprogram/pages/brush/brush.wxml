@@ -1,42 +1,64 @@
-<view class="container">
-  <!-- Canvas 层 -->
-  <view class="canvas-wrap" style="{{ canvasContainerStyle }}">
-    <canvas 
-      type="2d" 
-      id="brushCanvas" 
-      class="brush-canvas"
-      bindtouchstart="onTouchStart"
-      bindtouchmove="onTouchMove"
-      bindtouchend="onTouchEnd"
-      hidden="{{isCanvasHidden}}"
-    ></canvas>
-    <!-- 快照图片，用于在弹窗打开时替代 canvas 显示，避免层级遮挡 -->
-    <image 
-      wx:if="{{isCanvasHidden && snapshotUrl}}" 
-      src="{{snapshotUrl}}" 
-      class="brush-canvas-snapshot"
-      mode="scaleToFill"
-    />
+<view class="page">
+  <!-- 顶部操作栏 -->
+  <view class="top-bar">
+    <view class="top-left">
+    </view>
+    
+    <view class="circle-btn" bindtap="toggleTools">工具</view>
+
+    <view class="top-right">
+      <view class="rect-btn primary" bindtap="onSave">保存</view>
+    </view>
   </view>
 
-  <!-- 工具栏 Toggle -->
-  <view class="toggle-tools" bind:tap="toggleTools" wx:if="{{!toolsVisible}}">
-    <t-icon name="setting" size="48rpx" />
+  <view class="canvas-wrap">
+    <view class="canvas-container" style="{{canvasContainerStyle}}">
+      <canvas 
+        type="2d" 
+        id="brushCanvas" 
+        class="canvas {{isCanvasHidden ? 'hidden' : ''}}"
+        bindtouchstart="onTouchStart"
+        bindtouchmove="onTouchMove"
+        bindtouchend="onTouchEnd"
+        hidden="{{isCanvasHidden}}"
+      ></canvas>
+
+      <!-- 快照图片，用于在弹窗打开时替代 canvas 显示，避免层级遮挡 -->
+      <image 
+        wx:if="{{isCanvasHidden && snapshotUrl}}" 
+        src="{{snapshotUrl}}" 
+        class="canvas-snapshot" 
+        mode="scaleToFill"
+      ></image>
+    </view>
   </view>
 
-  <!-- 工具栏弹窗 -->
-  <t-popup visible="{{toolsVisible}}" bind:visible-change="onToolsVisibleChange" placement="bottom">
-    <view class="toolbar">
-      <view class="tool-section">
-        <view class="label">笔刷大小</view>
-        <t-slider value="{{lineMax}}" min="{{10}}" max="{{100}}" bind:change="onLineWidthChange" />
+  <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
+    <view class="sheet">
+      <view class="grabber"></view>
+      <view class="sheet-header">
+        <view>
+          <view class="sheet-title">工具与设置</view>
+        </view>
+        <t-button theme="danger" variant="base" size="small" bindtap="onClear">清空画布</t-button>
       </view>
-      
-      <view class="tool-actions">
-        <t-button theme="primary" variant="outline" block bind:tap="onImportBackground">导入背景</t-button>
-        <t-button theme="danger" variant="outline" block bind:tap="onClear">清空</t-button>
-        <t-button theme="primary" block bind:tap="onSave">保存作品</t-button>
+
+      <view class="tool-row" style="padding: 0 32rpx; margin-top: 20rpx;">
+        <t-button theme="primary" variant="outline" block bindtap="onImportBackground">导入临时背景</t-button>
       </view>
+
+      <view class="slider-row">
+        <view class="slider-card">
+          <view class="slider-header">
+            <text class="label">笔刷大小</text>
+            <text class="value">{{lineMax}}</text>
+          </view>
+          <view class="slider-vertical-box">
+             <t-slider vertical value="{{lineMax}}" min="{{10}}" max="{{100}}" bind:change="onLineWidthChange" />
+          </view>
+        </view>
+      </view>
+
     </view>
   </t-popup>
 

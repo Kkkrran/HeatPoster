@@ -85,7 +85,6 @@
       <view class="sheet-header">
         <view>
           <view class="sheet-title">工具与设置</view>
-          <view class="sheet-subtitle">缩小占用，画布更大</view>
         </view>
         <t-button theme="danger" variant="base" size="small" bindtap="onClear">清空画布</t-button>
       </view>
