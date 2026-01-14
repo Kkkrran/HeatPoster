@@ -21,8 +21,15 @@ Component({
     paddingTop: 0,
     artworks: [] as ArtworkItem[],
     loading: false,
+    scrollTop: 0, // 当前滚动位置
+    contentOpacity: 1, // 内容透明度，用于动画
   },
 
+  // 这里的 timer 需要放在此处或 methods 外，但在 Component 中通常挂在 this 上比较好
+  // 由于 Component 定义限制，我们在 attached 里初始化，detached 里清理
+  // 但 TS 类型检查可能会报错，所以也可以放在文件级变量（如果是单例页面）
+  // 考虑到 album 可能是单独页面，文件级变量也行，只要 exit 时清理
+  
   lifetimes: {
     attached() {
       const { statusBarHeight } = wx.getSystemInfoSync()
@@ -31,12 +38,131 @@ Component({
       })
       this.loadArtworks()
     },
+    detached() {
+      this.stopAutoScroll()
+    }
+  },
+  
+  pageLifetimes: {
+    show() {
+       // 页面显示时，开始自动滚动
+       if (!this.data.loading && this.data.artworks.length > 0) {
+         this.startAutoScroll()
+       }
+    },
+    hide() {
+       // 页面隐藏时，停止滚动
+       this.stopAutoScroll()
+    }
   },
 
   methods: {
     goBack() {
       wx.navigateBack()
     },
+
+    onTouchStart() {
+      // 用户开始触摸，停止自动滚动
+      const self = this as any
+      self._isUserInteracting = true
+      this.stopAutoScroll()
+      
+      // 清除恢复滚动的定时器
+      if (self._resumeTimer) {
+        clearTimeout(self._resumeTimer)
+        self._resumeTimer = null
+      }
+    },
+
+    onTouchEnd() {
+      const self = this as any
+      // 用户手指离开
+      self._isUserInteracting = false
+      
+      // 延迟一段时间后恢复自动滚动
+      // 3秒无操作后恢复
+      self._resumeTimer = setTimeout(() => {
+        // 只有当不在底部等待状态时才恢复滚动
+        if (!self._isWaiting && !self._isUserInteracting) {
+          this.startAutoScroll()
+        }
+      }, 3000)
+    },
+
+    // 需要监听滚动事件以更新 data.scrollTop
+    onScroll(e: any) {
+      // 这里的操作是关键：
+      // 我们需要让 this.data.scrollTop 保持最新，以便 autoScroll 从正确位置开始。
+      // 但是直接修改 this.data 而不 setData 是不推荐的，且不会影响视图。
+      // 然而这里我们 *只* 需要它作为下次计算的基准。
+      // 如果频繁调用 setData 会导致性能问题。
+      this.data.scrollTop = e.detail.scrollTop
+    },
+
+    startAutoScroll() {
+      const self = this as any
+      // 停止之前的滚动
+      this.stopAutoScroll()
+      
+      // 如果正在用户交互或者已经在等待，不要启动
+      if (self._isUserInteracting || self._isWaiting) return
+
+      // 读取配置
+      const speed = wx.getStorageSync('album_scroll_speed') || 20
+      // 映射速度: 1-100 -> 0.5px - 5px / 50ms
+      const pixelStep = Math.max(0.5, speed / 10)
+
+      self._scrollTimer = setInterval(() => {
+        if (self._isWaiting || self._isUserInteracting) {
+          this.stopAutoScroll()
+          return
+        }
+
+        // 简单的自增滚动
+        const nextScrollTop = this.data.scrollTop + pixelStep
+        this.setData({ scrollTop: nextScrollTop })
+      }, 50)
+    },
+
+    stopAutoScroll() {
+      const self = this as any
+      if (self._scrollTimer) {
+        clearInterval(self._scrollTimer)
+        self._scrollTimer = null
+      }
+    },
+
+    onScrollToLower() {
+      const self = this as any
+      if (self._isWaiting) return
+      self._isWaiting = true
+
+      const waitTime = wx.getStorageSync('album_wait_time')
+      const waitMs = (waitTime === '' ? 5 : waitTime) * 1000
+
+      console.log(`到底了，等待 ${waitMs / 1000} 秒`)
+
+      // 使用 setTimeout 处理等待和重置
+      setTimeout(() => {
+        // 1. 渐隐
+        this.setData({ contentOpacity: 0 })
+
+        setTimeout(() => {
+          // 2. 回到顶部 (瞬间)
+          this.setData({ scrollTop: 0 })
+
+          // 3. 渐显
+          setTimeout(() => {
+            this.setData({ contentOpacity: 1 })
+            // 重置等待状态，恢复滚动
+            self._isWaiting = false
+          }, 600) // 稍大于 transition 时间确保平滑
+
+        }, 500) // 等待渐隐动画完成
+
+      }, waitMs)
+    },
+
 
     // 从缓存加载
     loadFromCache(): ArtworkItem[] | null {
