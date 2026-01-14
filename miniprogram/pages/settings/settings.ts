@@ -1,5 +1,6 @@
 // 导入打印机SDK
 import bleTool from '../../SUPVANAPIT50PRO/BLETool.js'
+import bleToothManage from '../../SUPVANAPIT50PRO/BLEToothManage.js'
 
 // --- 接口定义 ---
 
@@ -29,6 +30,8 @@ Component({
     isScanning: false,
     cloudImageUrl: '', // 云存储图片的临时路径
     selectedBgFileName: '', // 当前选择的背景文件名
+    consumableInfoVisible: false, // 耗材信息对话框显示状态
+    consumableInfo: null, // 耗材信息数据
   },
 
   lifetimes: {
@@ -350,6 +353,61 @@ Component({
           icon: 'none'
         })
       })
+    },
+
+    clickConsumableInformation() {
+      const self = this as any
+      
+      // 检查是否已连接设备
+      if (!self.data.connectedDevice) {
+        wx.showToast({ 
+          title: '请先连接打印机', 
+          icon: 'none',
+          duration: 2000
+        })
+        return
+      }
+
+      console.log('获取耗材信息')
+      wx.showLoading({ title: '获取中...', mask: true })
+      
+      bleToothManage.ConsumableInformation().then((res: any) => {
+        console.log('耗材信息获取成功', res)
+        wx.hideLoading()
+        
+        // 解析返回结果
+        if (res && res.ResultCode === 0 && res.ResultValue) {
+          const info = res.ResultValue
+          self.setData({
+            consumableInfo: {
+              gap: info.gap || '未知',
+              paperDirectionSize: info.paperDirectionSize || '未知',
+              printHeadDirectionSize: info.printHeadDirectionSize || '未知'
+            },
+            consumableInfoVisible: true
+          })
+        } else {
+          // 显示错误信息
+          const errorMsg = res?.ErrorMsg || '获取失败'
+          wx.showModal({
+            title: '获取耗材信息失败',
+            content: JSON.stringify(errorMsg),
+            showCancel: false
+          })
+        }
+      }).catch((err: any) => {
+        console.error('获取耗材信息失败', err)
+        wx.hideLoading()
+        wx.showModal({
+          title: '获取失败',
+          content: err?.message || '请检查设备连接状态',
+          showCancel: false
+        })
+      })
+    },
+
+    onCloseConsumableInfo() {
+      ;(this as any).setData({ consumableInfoVisible: false })
     },
 
 

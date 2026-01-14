@@ -220,3 +220,34 @@ page {
 .popup-footer {
   margin-top: 16rpx;
 }
+
+/* 耗材信息对话框样式 */
+.consumable-info-content {
+  padding: 16rpx 0;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1px solid #e7e9ee;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 28rpx;
+  color: #5f6b7a;
+  flex: 1;
+}
+
+.info-value {
+  font-size: 28rpx;
+  color: #1f2329;
+  font-weight: 600;
+  flex: 1;
+  text-align: right;
+}

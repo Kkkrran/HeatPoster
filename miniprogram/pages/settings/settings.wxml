@@ -35,6 +35,9 @@
         <t-button variant="outline" theme="default" size="small" bindtap="clickDisconnectBleDevice" disabled="{{!connectedDevice}}">
           断开连接
         </t-button>
+        <t-button variant="outline" theme="primary" size="small" bindtap="clickConsumableInformation" disabled="{{!connectedDevice}}">
+          获取耗材信息
+        </t-button>
       </view>
       <view class="connection-status" wx:if="{{connectedDevice}}">
         <text class="status-label">已连接设备:</text>
@@ -105,6 +108,30 @@
       type="number"
       bind:change="onLimitInputChange"
     />
+  </t-dialog>
+
+  <!-- 耗材信息对话框 -->
+  <t-dialog
+    visible="{{consumableInfoVisible}}"
+    title="耗材信息"
+    confirm-btn="确定"
+    show-cancel="{{false}}"
+    bind:confirm="onCloseConsumableInfo"
+  >
+    <view slot="content" class="consumable-info-content" wx:if="{{consumableInfo}}">
+      <view class="info-item">
+        <text class="info-label">耗材间隙：</text>
+        <text class="info-value">{{consumableInfo.gap}}mm</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">出纸方向尺寸：</text>
+        <text class="info-value">{{consumableInfo.paperDirectionSize}}mm</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">打印头方向尺寸：</text>
+        <text class="info-value">{{consumableInfo.printHeadDirectionSize}}mm</text>
+      </view>
+    </view>
   </t-dialog>
 </view>
 
