@@ -44,11 +44,10 @@ Component({
       
       const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
       
-      // 加载已保存的打印机连接信息
-      const savedDevice = wx.getStorageSync('connected_printer_device')
-      if (savedDevice) {
-        self.setData({ connectedDevice: savedDevice })
-      }
+      // 不自动加载已保存的打印机连接信息
+      // 默认状态为未连接，只有用户主动搜索并连接设备后才显示已连接
+      // 这样可以确保每次打开小程序时都是未连接状态，需要重新搜索和连接
+      self.setData({ connectedDevice: null })
       
       // 加载选择的背景
       self.loadSelectedBackground()
@@ -312,8 +311,18 @@ Component({
         self.setData({ 
           connectedDevice: device
         })
-        // 保存连接信息到本地存储，供 editor 页面使用
+        // 保存连接信息到本地存储，供其他页面使用
         wx.setStorageSync('connected_printer_device', device)
+        
+        // 通知其他页面更新连接状态
+        // 通过获取所有页面实例并调用同步方法
+        const pages = getCurrentPages()
+        pages.forEach((page: any) => {
+          if (page.printManager && typeof page.printManager.syncConnectionFromStorage === 'function') {
+            page.printManager.syncConnectionFromStorage()
+          }
+        })
+        
         wx.showToast({
           title: '连接成功',
           icon: 'success'
@@ -340,6 +349,15 @@ Component({
         self.setData({ connectedDevice: null })
         // 清除本地存储的连接信息
         wx.removeStorageSync('connected_printer_device')
+        
+        // 通知其他页面更新连接状态
+        const pages = getCurrentPages()
+        pages.forEach((page: any) => {
+          if (page.printManager && typeof page.printManager.syncConnectionFromStorage === 'function') {
+            page.printManager.syncConnectionFromStorage()
+          }
+        })
+        
         wx.showToast({ 
           title: '已断开连接',
           icon: 'success'
@@ -348,6 +366,16 @@ Component({
         console.error('断开蓝牙设备失败', error)
         // 即使断开失败，也清除连接状态
         self.setData({ connectedDevice: null })
+        wx.removeStorageSync('connected_printer_device')
+        
+        // 通知其他页面更新连接状态
+        const pages = getCurrentPages()
+        pages.forEach((page: any) => {
+          if (page.printManager && typeof page.printManager.syncConnectionFromStorage === 'function') {
+            page.printManager.syncConnectionFromStorage()
+          }
+        })
+        
         wx.showToast({ 
           title: '断开失败',
           icon: 'none'

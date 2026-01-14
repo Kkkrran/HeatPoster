@@ -1,7 +1,5 @@
 // miniprogram/pages/editor/editor.ts
 
-// 导入打印管理模块
-import { PrintManager, DEFAULT_PRINT_SETTINGS } from './printManager'
 import drawQrcode from '../../SUPVANAPIT50PRO/weapp.qrcode.esm.js'
 
 // 定义笔触点结构
@@ -50,53 +48,25 @@ Page({
     hasUnsavedChanges: false,
     maxUndoSteps: 10,
     pureBlackBrush: false,
-    // 打印相关（严格按照SDK文档3.7节配置）
-    connectedDevice: null as any,
-    canvasText: null as any, // 文本canvas（与示例保持一致）
-    canvasBarCode: null as any, // 条码canvas（与示例保持一致）
-    printSettingsVisible: false, // 打印参数设置弹窗可见性
-    // Canvas 相关（SDK文档3.7节）
-    templateWidth: 400,      // 内容画布宽度（默认值400）
-    templateHeight: 240,      // 内容画布高度（默认值240）
-    barCodeWidth: 214,        // 条形码画布宽度（默认值214）
-    barCodeHeight: 72,        // 条形码画布高度（默认值72）
-    qrCodeWidth: 20,          // 二维码画布宽度（默认值20）
-    qrCodeHeight: 20,         // 二维码画布高度（默认值20）
-    pixelRatio: 1,            // 像素比（默认值1）
-    printNum: 0,              // 当前打印的份数
-    // 打印参数（默认值从 printManager 导入）
-    ...DEFAULT_PRINT_SETTINGS,
   },
 
   async onLoad(options: any) {
-    // 初始化实例变量
-    Object.assign(this, {
+      // 初始化实例变量
+      Object.assign(this, {
       strokes: [], // ... existing ...
-      redoStack: [],
+        redoStack: [],
       currentStroke: [], // ... existing ...
-      needsRender: false,
+        needsRender: false,
       renderLoopId: 0,
-      printManager: new PrintManager(this) // 初始化打印管理器
     })
     // 先加载常驻背景，然后再初始化画布（这样可以根据常驻背景的比例调整画布）
     await this.loadPermanentBackground()
     // 等待画布初始化完成
     await this.initCanvas()
     
-    // 使用打印管理器初始化（严格按照SDK文档3.8节）
-    // 获取像素比值
-    const systemInfo = wx.getSystemInfoSync()
-    const pixelRatio = systemInfo.pixelRatio || 1
-    this.setData({ pixelRatio })
-    
-    // 初始化打印 Canvas（SDK文档3.8节）
-    const self = this as any
-    self.printManager.initPrintCanvas()
-    self.printManager.checkPrinterConnection()
-    self.printManager.loadPrintSettings() // 加载保存的打印参数
     this.loadBrushPreferences()
     
-    this.getOpenId()
+      this.getOpenId()
     
     if (options && options.id) {
       this.setData({ artworkId: options.id })
@@ -106,21 +76,16 @@ Page({
   },
   
   onUnload() {
-    const self = this as any
-    if (self.renderLoopId) {
-      self.canvas.cancelAnimationFrame(self.renderLoopId)
-    }
-  },
+      const self = this as any
+      if (self.renderLoopId) {
+        self.canvas.cancelAnimationFrame(self.renderLoopId)
+      }
+    },
   
   onShow() {
     const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
     this.setData({ maxUndoSteps })
     this.updateExitConfirmState()
-    // 每次显示页面时检查打印机连接状态
-    const self = this as any
-    if (self.printManager) {
-      self.printManager.checkPrinterConnection()
-    }
     // 重新加载常驻背景（可能用户在设置页面修改了）
     this.loadPermanentBackground()
     // 刷新画笔模式
@@ -142,26 +107,26 @@ Page({
         success: (res) => { console.log('disableAlertBeforeUnload success', res) },
         fail: (err) => { console.log('disableAlertBeforeUnload fail', err) }
       })
-    }
-  },
-
-  async getOpenId() {
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'editor',
-        data: { action: 'getOpenId' }
-      })
-      const result = res.result as any
-      if (!result.ok) {
-        console.error('getOpenId cloud error:', result)
-        return
       }
-      const openid = result.data.openid
-      this.setData({ openid })
-    } catch (e) {
-      console.error('getOpenId failed', e)
-    }
-  },
+    },
+
+    async getOpenId() {
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'editor',
+          data: { action: 'getOpenId' }
+        })
+        const result = res.result as any
+        if (!result.ok) {
+          console.error('getOpenId cloud error:', result)
+          return
+        }
+        const openid = result.data.openid
+        this.setData({ openid })
+      } catch (e) {
+        console.error('getOpenId failed', e)
+      }
+    },
 
   // 加载常驻背景
   async loadPermanentBackground() {
@@ -265,18 +230,18 @@ Page({
     }
 
     this.setData(nextData)
-  },
+    },
 
-  toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
-    const toast = this.selectComponent('#t-toast') as any
-    if (!toast || typeof toast.show !== 'function') return
-    toast.show({
-      theme,
-      direction: 'column',
-      message,
-      duration: 1800,
-    })
-  },
+    toast(message: string, theme: 'success' | 'error' | 'warning' | 'loading' | 'info' = 'info') {
+      const toast = this.selectComponent('#t-toast') as any
+      if (!toast || typeof toast.show !== 'function') return
+      toast.show({
+        theme,
+        direction: 'column',
+        message,
+        duration: 1800,
+      })
+    },
 
   initCanvas(): Promise<void> {
     return new Promise((resolve) => {
@@ -321,21 +286,21 @@ Page({
           // 查询canvas元素
           const canvasQuery = this.createSelectorQuery()
           canvasQuery.select('#paintCanvas')
-            .fields({ node: true, size: true })
-            .exec((res) => {
+        .fields({ node: true, size: true })
+        .exec((res) => {
               if (!res[0] || !res[0].node) {
                 resolve()
                 return
               }
-              const canvas = res[0].node
-              const ctx = canvas.getContext('2d')
-              // @ts-ignore
-              const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
-              
-              const self = this as any
-              self.canvas = canvas
-              self.ctx = ctx
-              self.dpr = dpr
+          const canvas = res[0].node
+          const ctx = canvas.getContext('2d')
+          // @ts-ignore
+          const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
+          
+          const self = this as any
+          self.canvas = canvas
+          self.ctx = ctx
+          self.dpr = dpr
               
               // 如果设置了容器样式，需要等待下一帧再获取实际尺寸
               if (canvasContainerStyle) {
@@ -368,72 +333,72 @@ Page({
                 }, 100)
               } else {
                 // 没有设置容器样式，使用默认尺寸
-                self.width = res[0].width
-                self.height = res[0].height
+          self.width = res[0].width
+          self.height = res[0].height
 
-                canvas.width = res[0].width * dpr
-                canvas.height = res[0].height * dpr
-                ctx.scale(dpr, dpr)
+          canvas.width = res[0].width * dpr
+          canvas.height = res[0].height * dpr
+          ctx.scale(dpr, dpr)
 
-                // 初始化离屏 Canvas
-                // @ts-ignore
-                self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
-                self.memCtx = self.memCanvas.getContext('2d')
+          // 初始化离屏 Canvas
+          // @ts-ignore
+          self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
+          self.memCtx = self.memCanvas.getContext('2d')
 
-                this.initPalette()
-                this.startRenderLoop()
+          this.initPalette()
+          this.startRenderLoop()
                 resolve()
               }
             })
         })
-    })
-  },
+        })
+    },
 
-  initPalette() {
-    // @ts-ignore
-    const pCanvas = wx.createOffscreenCanvas({ type: '2d', width: 256, height: 1 })
-    const pCtx = pCanvas.getContext('2d')
-    
-    const grad = pCtx.createLinearGradient(0, 0, 256, 0)
-    grad.addColorStop(0.0, "rgba(0,0,0,0)")
-    grad.addColorStop(0.2, "rgba(0,0,255,0.2)")
-    grad.addColorStop(0.3, "rgba(43,111,231,0.3)")
-    grad.addColorStop(0.4, "rgba(2,192,241,0.4)")
-    grad.addColorStop(0.6, "rgba(44,222,148,0.6)")
-    grad.addColorStop(0.8, "rgba(254,237,83,0.8)")
-    grad.addColorStop(0.9, "rgba(255,118,50,0.9)")
-    grad.addColorStop(1.0, "rgba(255,10,0,0.95)")
-    
-    pCtx.fillStyle = grad
-    pCtx.fillRect(0, 0, 256, 1)
-    
-    const imageData = pCtx.getImageData(0, 0, 256, 1)
-    const self = this as any
-    self.palette = imageData.data
-  },
+    initPalette() {
+      // @ts-ignore
+      const pCanvas = wx.createOffscreenCanvas({ type: '2d', width: 256, height: 1 })
+      const pCtx = pCanvas.getContext('2d')
+      
+      const grad = pCtx.createLinearGradient(0, 0, 256, 0)
+      grad.addColorStop(0.0, "rgba(0,0,0,0)")
+      grad.addColorStop(0.2, "rgba(0,0,255,0.2)")
+      grad.addColorStop(0.3, "rgba(43,111,231,0.3)")
+      grad.addColorStop(0.4, "rgba(2,192,241,0.4)")
+      grad.addColorStop(0.6, "rgba(44,222,148,0.6)")
+      grad.addColorStop(0.8, "rgba(254,237,83,0.8)")
+      grad.addColorStop(0.9, "rgba(255,118,50,0.9)")
+      grad.addColorStop(1.0, "rgba(255,10,0,0.95)")
+      
+      pCtx.fillStyle = grad
+      pCtx.fillRect(0, 0, 256, 1)
+      
+      const imageData = pCtx.getImageData(0, 0, 256, 1)
+      const self = this as any
+      self.palette = imageData.data
+    },
 
-  startRenderLoop() {
-    const self = this as any
-    const loop = () => {
-      if (self.needsRender) {
-        this.render()
-        self.needsRender = false
+    startRenderLoop() {
+      const self = this as any
+      const loop = () => {
+        if (self.needsRender) {
+          this.render()
+          self.needsRender = false
+        }
+        self.renderLoopId = self.canvas.requestAnimationFrame(loop)
       }
       self.renderLoopId = self.canvas.requestAnimationFrame(loop)
-    }
-    self.renderLoopId = self.canvas.requestAnimationFrame(loop)
-  },
+    },
 
-  onTouchStart(e: any) {
-    const { x, y } = e.touches[0]
-    const self = this as any
-    self.currentStroke = []
+    onTouchStart(e: any) {
+      const { x, y } = e.touches[0]
+      const self = this as any
+      self.currentStroke = []
     self.lastPoint = { x, y } // 记录上一个点的位置
-    this.addPoint(x, y)
-  },
+      this.addPoint(x, y)
+    },
 
-  onTouchMove(e: any) {
-    const { x, y } = e.touches[0]
+    onTouchMove(e: any) {
+      const { x, y } = e.touches[0]
     const self = this as any
     
     // 计算与上一个点的距离
@@ -456,70 +421,70 @@ Page({
     
     // 更新上一个点
     self.lastPoint = { x, y }
-  },
+    },
 
-  onTouchEnd(_e: any) {
-    const self = this as any
-    if (self.currentStroke.length > 0) {
-      self.strokes.push(self.currentStroke)
-      self.redoStack = []
-      this.setData({ 
-        canUndo: true,
+    onTouchEnd(_e: any) {
+      const self = this as any
+      if (self.currentStroke.length > 0) {
+        self.strokes.push(self.currentStroke)
+        self.redoStack = []
+        this.setData({ 
+          canUndo: true,
         canRedo: false,
         hasUnsavedChanges: true
-      })
+        })
       this.updateExitConfirmState()
-      self.currentStroke = []
-    }
-  },
+        self.currentStroke = []
+      }
+    },
 
-  addPoint(x: number, y: number) {
-    const self = this as any
-    if (!self.memCtx) return
-    const point: HeatPoint = {
-      x,
-      y,
-      r: this.data.brushRadius,
-      opacity: 0.05 * this.data.heatRate
-    }
-    self.currentStroke.push(point)
-    this.drawAlphaPoint(point)
-    self.needsRender = true
-  },
+    addPoint(x: number, y: number) {
+      const self = this as any
+      if (!self.memCtx) return
+      const point: HeatPoint = {
+        x,
+        y,
+        r: this.data.brushRadius,
+        opacity: 0.05 * this.data.heatRate
+      }
+      self.currentStroke.push(point)
+      this.drawAlphaPoint(point)
+      self.needsRender = true
+    },
 
-  drawAlphaPoint(p: HeatPoint) {
-    const self = this as any
-    const ctx = self.memCtx
-    const dpr = self.dpr
-    const cx = p.x * dpr
-    const cy = p.y * dpr
-    const r = p.r * dpr
-    
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
-    grad.addColorStop(0, `rgba(0,0,0,${p.opacity})`)
-    grad.addColorStop(1, "rgba(0,0,0,0)")
-    
-    ctx.fillStyle = grad
-    ctx.beginPath()
-    ctx.arc(cx, cy, r, 0, 2 * Math.PI)
-    ctx.fill()
-  },
+    drawAlphaPoint(p: HeatPoint) {
+      const self = this as any
+      const ctx = self.memCtx
+      const dpr = self.dpr
+      const cx = p.x * dpr
+      const cy = p.y * dpr
+      const r = p.r * dpr
+      
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+      grad.addColorStop(0, `rgba(0,0,0,${p.opacity})`)
+      grad.addColorStop(1, "rgba(0,0,0,0)")
+      
+      ctx.fillStyle = grad
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+      ctx.fill()
+    },
 
-  render() {
-    const self = this as any
-    if (!self.palette || !self.memCtx || !self.ctx) return
-    
-    const w = self.memCanvas.width
-    const h = self.memCanvas.height
-    
-    const imageData = self.memCtx.getImageData(0, 0, w, h)
-    const data = imageData.data
-    const palette = self.palette
+    render() {
+      const self = this as any
+      if (!self.palette || !self.memCtx || !self.ctx) return
+      
+      const w = self.memCanvas.width
+      const h = self.memCanvas.height
+      
+      const imageData = self.memCtx.getImageData(0, 0, w, h)
+      const data = imageData.data
+      const palette = self.palette
     const usePureBlack = this.data?.pureBlackBrush
-    
-    for (let i = 0; i < data.length; i += 4) {
-      const alpha = data[i + 3]
-      if (alpha > 0) {
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3]
+        if (alpha > 0) {
         if (usePureBlack) {
           data[i] = 0
           data[i + 1] = 0
@@ -532,66 +497,66 @@ Page({
           data[i + 2] = palette[offset + 2]
           data[i + 3] = palette[offset + 3]
         }
+        }
       }
-    }
-    
-    self.ctx.putImageData(imageData, 0, 0)
-  },
+      
+      self.ctx.putImageData(imageData, 0, 0)
+    },
 
-  redrawAll() {
-    const self = this as any
-    if (!self.memCtx) return
-    self.memCtx.clearRect(0, 0, self.memCanvas.width, self.memCanvas.height)
-    
-    for (const stroke of self.strokes) {
-      for (const p of stroke) {
-        this.drawAlphaPoint(p)
+    redrawAll() {
+      const self = this as any
+      if (!self.memCtx) return
+      self.memCtx.clearRect(0, 0, self.memCanvas.width, self.memCanvas.height)
+      
+      for (const stroke of self.strokes) {
+        for (const p of stroke) {
+          this.drawAlphaPoint(p)
+        }
       }
-    }
-    
-    self.needsRender = true
-  },
+      
+      self.needsRender = true
+    },
 
-  openTools() {
-    const self = this as any
-    // 生成快照以解决原生 Canvas 遮挡 Popup 的问题
-    wx.canvasToTempFilePath({
-      canvas: self.canvas,
-      fileType: 'png',
-      quality: 0.8,
-      success: (res) => {
-        this.setData({
-          snapshotUrl: res.tempFilePath,
-          isCanvasHidden: true,
-          toolsVisible: true
-        })
-      },
-      fail: (err) => {
-        console.error('snapshot failed', err)
-        // 降级处理：直接打开，虽然可能会遮挡
-        this.setData({ toolsVisible: true })
-      }
-    })
-  },
+    openTools() {
+      const self = this as any
+      // 生成快照以解决原生 Canvas 遮挡 Popup 的问题
+      wx.canvasToTempFilePath({
+        canvas: self.canvas,
+        fileType: 'png',
+        quality: 0.8,
+        success: (res) => {
+          this.setData({
+            snapshotUrl: res.tempFilePath,
+            isCanvasHidden: true,
+            toolsVisible: true
+          })
+        },
+        fail: (err) => {
+          console.error('snapshot failed', err)
+          // 降级处理：直接打开，虽然可能会遮挡
+          this.setData({ toolsVisible: true })
+        }
+      })
+    },
 
-  closeTools() {
-    this.setData({ 
-      toolsVisible: false,
-      isCanvasHidden: false
-    })
-  },
+    closeTools() {
+      this.setData({ 
+        toolsVisible: false,
+        isCanvasHidden: false
+      })
+    },
 
-  onToolsVisibleChange(e: any) {
-    const { visible } = e.detail || {}
-    this.setData({ 
-      toolsVisible: !!visible,
-      // 当弹窗关闭（点击遮罩层）时，也要恢复 Canvas 显示
-      isCanvasHidden: !!visible 
-    })
-  },
+    onToolsVisibleChange(e: any) {
+      const { visible } = e.detail || {}
+      this.setData({ 
+        toolsVisible: !!visible,
+        // 当弹窗关闭（点击遮罩层）时，也要恢复 Canvas 显示
+        isCanvasHidden: !!visible 
+      })
+    },
 
-  onBrushRadiusChange(e: any) {
-    console.log('onBrushRadiusChange', e)
+    onBrushRadiusChange(e: any) {
+      console.log('onBrushRadiusChange', e)
     const { value } = e.detail || {}
     if (value !== undefined) {
       const min = this.data.brushRadiusMin || BRUSH_RADIUS_RANGE.min
@@ -601,10 +566,10 @@ Page({
       const radius = clampValue(numericValue, min, max)
       this.setData({ brushRadius: radius })
     }
-  },
+    },
 
-  onHeatRateChange(e: any) {
-    console.log('onHeatRateChange', e)
+    onHeatRateChange(e: any) {
+      console.log('onHeatRateChange', e)
     const { value } = e.detail || {}
     if (value !== undefined) {
       const min = this.data.heatRateMin || BRUSH_CONFIG.normal.heatMin
@@ -621,11 +586,11 @@ Page({
     if (url) {
       this.setData({ backgroundImage: url })
     }
-  },
+    },
 
-  onUndo() {
-    const self = this as any
-    if (self.strokes.length === 0) return
+    onUndo() {
+      const self = this as any
+      if (self.strokes.length === 0) return
 
     // 检查 undo 栈是否达到了用户设置的最大步数限制
     if (self.redoStack.length >= this.data.maxUndoSteps) {
@@ -633,53 +598,53 @@ Page({
       // 这里的实现暂且保留原样，确保 UI 设置是生效并被读取的。
     }
 
-    const stroke = self.strokes.pop()
-    if (stroke) {
-      self.redoStack.push(stroke)
-      this.setData({ 
-        canUndo: self.strokes.length > 0,
+      const stroke = self.strokes.pop()
+      if (stroke) {
+        self.redoStack.push(stroke)
+        this.setData({ 
+          canUndo: self.strokes.length > 0,
         canRedo: true,
         hasUnsavedChanges: true
-      })
+        })
       this.updateExitConfirmState()
-      this.redrawAll()
-      this.toast('已撤回')
-    }
-  },
+        this.redrawAll()
+        this.toast('已撤回')
+      }
+    },
 
-  onRedo() {
-    const self = this as any
-    if (self.redoStack.length === 0) return
-    const stroke = self.redoStack.pop()
-    if (stroke) {
-      self.strokes.push(stroke)
-      this.setData({ 
-        canUndo: true,
+    onRedo() {
+      const self = this as any
+      if (self.redoStack.length === 0) return
+      const stroke = self.redoStack.pop()
+      if (stroke) {
+        self.strokes.push(stroke)
+        this.setData({ 
+          canUndo: true,
         canRedo: self.redoStack.length > 0,
         hasUnsavedChanges: true
-      })
+        })
       this.updateExitConfirmState()
-      for (const p of stroke) {
-        this.drawAlphaPoint(p)
+        for (const p of stroke) {
+          this.drawAlphaPoint(p)
+        }
+        self.needsRender = true
+        this.toast('已重做')
       }
-      self.needsRender = true
-      this.toast('已重做')
-    }
-  },
+    },
 
-  onClear() {
-    const self = this as any
-    self.strokes = []
-    self.redoStack = []
+    onClear() {
+      const self = this as any
+      self.strokes = []
+      self.redoStack = []
     this.setData({ 
       canUndo: false, 
       canRedo: false,
       hasUnsavedChanges: true
     })
     this.updateExitConfirmState()
-    this.redrawAll()
-    this.toast('画布已清空')
-  },
+      this.redrawAll()
+      this.toast('画布已清空')
+    },
 
   onSave() {
     this.setData({ toolsVisible: false })
@@ -717,18 +682,18 @@ Page({
   
   // 實際執行保存的邏輯，將被 onSave 調用
   async saveArtwork() {
-    const self = this as any
-    if (self.strokes.length === 0) {
-      this.toast('画布为空', 'warning')
-      return
-    }
-    
-    this.toast('正在保存...', 'loading')
-    
-    try {
+      const self = this as any
+      if (self.strokes.length === 0) {
+        this.toast('画布为空', 'warning')
+        return
+      }
+      
+      this.toast('正在保存...', 'loading')
+      
+      try {
       // 确保作品 id 在上传前就存在，这样多次保存会使用相同的文件名
-      let id = this.data.artworkId
-      if (!id) {
+        let id = this.data.artworkId
+        if (!id) {
         // 创建新作品时，如果有常驻背景，使用常驻背景的比例
         let width = self.width
         let height = self.height
@@ -741,19 +706,19 @@ Page({
           height = containerHeight
         }
 
-        const res = await wx.cloud.callFunction({
-          name: 'editor',
-          data: { 
-            action: 'create',
-            name: '未命名作品',
+           const res = await wx.cloud.callFunction({
+             name: 'editor',
+             data: { 
+               action: 'create',
+               name: '未命名作品',
             width: width,
             height: height
-          }
-        })
-        // @ts-ignore
-        id = res.result.data.id
-        this.setData({ artworkId: id })
-      }
+             }
+           })
+           // @ts-ignore
+           id = res.result.data.id
+           this.setData({ artworkId: id })
+        }
 
       // 使用 artwork id 作为文件名的一部分，确保多次保存保持一致
       const strokesData = JSON.stringify(self.strokes)
@@ -774,20 +739,20 @@ Page({
         cloudPath: `artworks/${openid}/${id}_thumb.png`,
         filePath: composedImagePath
       })
-
-      await wx.cloud.callFunction({
-        name: 'editor',
-        data: {
-          action: 'savePoints',
-          id,
-          pointsFileId,
-          thumbnailFileId
-        }
-      })
-
+        
+        await wx.cloud.callFunction({
+          name: 'editor',
+          data: {
+            action: 'savePoints',
+            id,
+            pointsFileId,
+            thumbnailFileId
+          }
+        })
+        
       this.setData({ hasUnsavedChanges: false })
       this.updateExitConfirmState()
-      this.toast('保存成功', 'success')
+        this.toast('保存成功', 'success')
 
       // 保存成功后直接导出合成图到相册（不再弹窗）
       try {
@@ -809,63 +774,63 @@ Page({
       } catch (err) {
         console.error('导出到相册失败', err)
       }
-      
-    } catch (err) {
-      console.error(err)
-      this.toast('保存失败', 'error')
-    }
-  },
-  
-  async loadArtwork(id: string) {
-    const self = this as any
-    this.toast('加载中...', 'loading')
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'editor',
-        data: { action: 'get', id }
-      })
-      // @ts-ignore
-      const data = res.result.data
-      if (data && data.pointsFileId) {
-        const downloadRes = await wx.cloud.downloadFile({ fileID: data.pointsFileId })
-        const fs = wx.getFileSystemManager()
-        const jsonStr = fs.readFileSync(downloadRes.tempFilePath, 'utf8')
-        const strokes = JSON.parse(jsonStr as string)
         
-        self.strokes = strokes
-        this.redrawAll()
-        this.setData({ canUndo: true })
+      } catch (err) {
+        console.error(err)
+        this.toast('保存失败', 'error')
       }
-      this.toast('加载完成', 'success')
-    } catch (err) {
-      console.error(err)
-      this.toast('加载失败', 'error')
-    }
-  },
-
-  onImportBackground() {
-    const self = this as any
-    wx.chooseImage({
-      count: 1,
-      sizeType: ['original', 'compressed'],
-      sourceType: ['album', 'camera'],
-      success(res) {
-        const tempFilePaths = res.tempFilePaths
-        if (tempFilePaths.length > 0) {
-          const src = tempFilePaths[0]
+    },
+    
+    async loadArtwork(id: string) {
+      const self = this as any
+      this.toast('加载中...', 'loading')
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'editor',
+          data: { action: 'get', id }
+        })
+        // @ts-ignore
+        const data = res.result.data
+        if (data && data.pointsFileId) {
+          const downloadRes = await wx.cloud.downloadFile({ fileID: data.pointsFileId })
+          const fs = wx.getFileSystemManager()
+          const jsonStr = fs.readFileSync(downloadRes.tempFilePath, 'utf8')
+          const strokes = JSON.parse(jsonStr as string)
           
+          self.strokes = strokes
+          this.redrawAll()
+          this.setData({ canUndo: true })
+        }
+        this.toast('加载完成', 'success')
+      } catch (err) {
+        console.error(err)
+        this.toast('加载失败', 'error')
+      }
+    },
+
+    onImportBackground() {
+      const self = this as any
+      wx.chooseImage({
+        count: 1,
+        sizeType: ['original', 'compressed'],
+        sourceType: ['album', 'camera'],
+        success(res) {
+          const tempFilePaths = res.tempFilePaths
+          if (tempFilePaths.length > 0) {
+            const src = tempFilePaths[0]
+            
           // @ts-ignore
           if (wx.editImage) {
             // @ts-ignore
             wx.editImage({
               src: src,
               success: (editRes: any) => {
-                self.setData({
+                      self.setData({
                   backgroundImage: editRes.tempFilePath,
-                  // 关闭工具面板，以便查看背景
-                  toolsVisible: false,
-                  isCanvasHidden: false
-                })
+                        // 关闭工具面板，以便查看背景
+                        toolsVisible: false,
+                        isCanvasHidden: false
+                      })
               },
               fail: (err: any) => {
                 console.log('editImage cancelled or failed', err)
@@ -918,9 +883,9 @@ Page({
             this.toast('保存到相册失败', 'error')
             resolve()
           }
-        }
-      })
-    })
+                  }
+                })
+              })
   },
 
     /**
@@ -1093,28 +1058,18 @@ Page({
         
         tempHeatmapCtx.putImageData(contentImageData, 0, 0)
         
-        // 将裁剪后的内容缩放到标准尺寸并居中显示（确保边距一致）
-        // 留出固定的边距（5%），确保不同设备边距一致
-        const padding = Math.min(standardWidth * 0.05, standardHeight * 0.05)
-        const scaleX = (standardWidth - padding * 2) / contentWidth
-        const scaleY = (standardHeight - padding * 2) / contentHeight
-        const scale = Math.min(scaleX, scaleY) // 保持宽高比
-        const scaledWidth = contentWidth * scale
-        const scaledHeight = contentHeight * scale
-        const offsetX = (standardWidth - scaledWidth) / 2  // 居中
-        const offsetY = (standardHeight - scaledHeight) / 2
-        
-        console.log('内容裁剪和居中（确保边距一致）:', {
+        // 将裁剪后的内容拉伸填满标准尺寸画布，从 (0,0) 开始
+        // 使用 fill 模式：直接拉伸填满画布，确保打印时图片从纸张左上角开始，不会出现偏移
+        console.log('内容裁剪和拉伸填满（确保打印位置准确）:', {
           原始内容区域: `(${minX}, ${minY}) - (${maxX}, ${maxY})`,
           内容尺寸: `${contentWidth}x${contentHeight}`,
           内容占比: `${(contentRatio * 100).toFixed(1)}%`,
-          缩放比例: scale.toFixed(3),
-          居中位置: `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`,
-          边距: `${padding.toFixed(1)}px (5%)`,
-          说明: '裁剪空白边缘后居中显示，确保不同设备左边距一致'
+          目标尺寸: `${standardWidth}x${standardHeight}`,
+          说明: '裁剪空白边缘后拉伸填满画布，从(0,0)开始，确保打印位置准确'
         })
         
-        offscreenCtx.drawImage(tempHeatmapCanvas, offsetX, offsetY, scaledWidth, scaledHeight)
+        // 直接拉伸填满整个画布，从 (0,0) 开始
+        offscreenCtx.drawImage(tempHeatmapCanvas, 0, 0, standardWidth, standardHeight)
       } else {
         // 如果内容占比超过 90% 或没有检测到有效内容，使用原有逻辑（全图缩放居中）
         // 这样可以避免误裁剪导致打印空白
@@ -1123,24 +1078,17 @@ Page({
         const tempHeatmapCtx = tempHeatmapCanvas.getContext('2d')
         tempHeatmapCtx.putImageData(originalHeatmapData, 0, 0)
         
-        // 将热力图缩放到标准尺寸并绘制到合成画布上（居中显示）
-        const scaleX = standardWidth / originalWidth
-        const scaleY = standardHeight / originalHeight
-        const scale = Math.min(scaleX, scaleY) // 保持宽高比
-        const scaledWidth = originalWidth * scale
-        const scaledHeight = originalHeight * scale
-        const offsetX = (standardWidth - scaledWidth) / 2
-        const offsetY = (standardHeight - scaledHeight) / 2
-        
-        console.log('使用全图缩放（内容占比过高或未检测到有效内容）:', {
+        // 将热力图拉伸填满标准尺寸画布，从 (0,0) 开始
+        // 使用 fill 模式：直接拉伸填满画布，确保打印时图片从纸张左上角开始，不会出现偏移
+        console.log('使用全图拉伸填满（内容占比过高或未检测到有效内容）:', {
           内容占比: hasContent ? `${(contentRatio * 100).toFixed(1)}%` : '0%',
           原始尺寸: `${originalWidth}x${originalHeight}`,
-          缩放比例: scale.toFixed(3),
-          居中位置: `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`,
-          说明: '内容占比超过90%，不进行裁剪，直接缩放居中'
+          目标尺寸: `${standardWidth}x${standardHeight}`,
+          说明: '内容占比超过90%，不进行裁剪，直接拉伸填满画布，从(0,0)开始，确保打印位置准确'
         })
         
-        offscreenCtx.drawImage(tempHeatmapCanvas, offsetX, offsetY, scaledWidth, scaledHeight)
+        // 直接拉伸填满整个画布，从 (0,0) 开始
+        offscreenCtx.drawImage(tempHeatmapCanvas, 0, 0, standardWidth, standardHeight)
       }
     }
 
@@ -1160,150 +1108,6 @@ Page({
         fail: reject
       })
     })
-  },
-
-  // ========== 打印功能 ==========
-  // 打印相关逻辑已拆分到 printManager.ts 中
-
-  // 点击打印按钮 - 显示参数设置弹窗
-  onPrint() {
-    const self = this as any
-
-    // 使用打印管理器检查是否可以打印
-    if (self.printManager) {
-      const checkResult = self.printManager.canPrint()
-      if (!checkResult.canPrint) {
-        if (checkResult.message?.includes('未连接打印机')) {
-          wx.showModal({
-            title: '未连接打印机',
-            content: checkResult.message,
-            showCancel: true,
-            confirmText: '去设置',
-            cancelText: '取消',
-            success: (res) => {
-              if (res.confirm) {
-                wx.navigateTo({ url: '/pages/settings/settings' })
-              }
-            }
-          })
-        } else {
-          this.toast(checkResult.message || '无法打印', 'warning')
-        }
-        return
-      }
-    }
-
-    // 显示打印参数设置弹窗
-    this.setData({ printSettingsVisible: true })
-  },
-
-  // 加载保存的打印参数（如果没有则使用默认值）
-  loadPrintSettings() {
-    const self = this as any
-    if (self.printManager) {
-      self.printManager.loadPrintSettings()
-    }
-  },
-
-  // 保存打印参数
-  savePrintSettings() {
-    const self = this as any
-    if (self.printManager) {
-      self.printManager.savePrintSettings({
-        printWidth: this.data.printWidth,
-        printHeight: this.data.printHeight,
-        printCopies: this.data.printCopies,
-        printDensity: this.data.printDensity,
-        printSpeed: this.data.printSpeed,
-        printRotate: this.data.printRotate,
-        printPaperType: this.data.printPaperType,
-        printGap: this.data.printGap,
-      })
-    }
-  },
-
-  // 关闭打印参数设置弹窗
-  onClosePrintSettings() {
-    this.setData({ printSettingsVisible: false })
-  },
-
-  // 打印参数变化处理
-  onPrintWidthChange(e: any) {
-    // TDesign input 的 change 事件返回 { value: string }
-    const value = parseFloat(e.detail?.value || e.detail || String(this.data.printWidth)) || this.data.printWidth
-    this.setData({ printWidth: value })
-  },
-
-  onPrintHeightChange(e: any) {
-    const value = parseFloat(e.detail?.value || e.detail || String(this.data.printHeight)) || this.data.printHeight
-    this.setData({ printHeight: value })
-  },
-
-  onPrintCopiesChange(e: any) {
-    const value = parseInt(e.detail?.value || e.detail || String(this.data.printCopies)) || this.data.printCopies
-    this.setData({ printCopies: Math.max(1, Math.min(100, value)) })
-  },
-
-  onPrintDensityChange(e: any) {
-    const value = parseInt(e.detail.value) || 3
-    // SDK 文档：浓度范围 1-9，默认3
-    this.setData({ printDensity: Math.max(1, Math.min(9, value)) })
-  },
-
-  onPrintSpeedChange(e: any) {
-    const value = parseInt(e.detail.value) || 30
-    // SDK 文档：打印速度范围 15-60，默认30
-    this.setData({ printSpeed: Math.max(15, Math.min(60, value)) })
-  },
-
-  onPrintRotateChange(e: any) {
-    const value = parseInt(e.detail.value) || 1
-    // 旋转角度只支持 1（0度）或 2（90度）
-    this.setData({ printRotate: value === 1 || value === 2 ? value : 1 })
-  },
-
-  onPrintPaperTypeChange(e: any) {
-    const value = parseInt(e.detail.value) || 1
-    this.setData({ printPaperType: Math.max(1, Math.min(3, value)) })
-  },
-
-  onPrintGapChange(e: any) {
-    const value = parseFloat(e.detail?.value || e.detail || String(this.data.printGap)) || this.data.printGap
-    // SDK 文档：纸张间隙范围 0-8，默认3
-    this.setData({ printGap: Math.max(0, Math.min(8, value)) })
-  },
-
-  // 设置旋转角度
-  onSetRotate(e: any) {
-    const value = parseInt(e.currentTarget.dataset.value) || 1
-    this.setData({ printRotate: value })
-  },
-
-  // 设置纸张类型
-  onSetPaperType(e: any) {
-    const value = parseInt(e.currentTarget.dataset.value) || 1
-    this.setData({ printPaperType: value })
-  },
-
-  // 打印参数弹窗可见性变化
-  onPrintSettingsVisibleChange(e: any) {
-    this.setData({ printSettingsVisible: e.detail.visible })
-  },
-
-  // 确认打印 - 执行实际打印操作
-  async onConfirmPrint() {
-    const self = this as any
-    
-    // 关闭参数设置弹窗
-    this.setData({ printSettingsVisible: false })
-
-    try {
-      // 使用打印管理器执行打印
-      await self.printManager.print('', () => this.getComposedImagePath())
-    } catch (error) {
-      console.error('打印失败', error)
-      // 错误已在 printManager 中处理
-    }
   },
 
   // 真正的生成二维码实现

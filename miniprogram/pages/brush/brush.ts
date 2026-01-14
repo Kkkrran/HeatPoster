@@ -1,7 +1,6 @@
 import drawQrcode from '../../SUPVANAPIT50PRO/weapp.qrcode.esm.js'
-
-const MAX_EXPORT_WIDTH = 1169
-const MAX_EXPORT_HEIGHT = 1559
+// 导入打印管理模块
+import { PrintManager, DEFAULT_PRINT_SETTINGS } from '../editor/printManager'
 
 Page({
   data: {
@@ -21,6 +20,20 @@ Page({
     isCanvasHidden: false,
     snapshotUrl: '',
     qrCodeUrl: '', // 下载链接的二维码图片路径
+    
+    // 打印相关
+    connectedDevice: null as any,
+    canvasText: null as any,
+    canvasBarCode: null as any,
+    printSettingsVisible: false,
+    templateWidth: 400,
+    templateHeight: 240,
+    barCodeWidth: 214,
+    barCodeHeight: 72,
+    pixelRatio: 1,
+    printNum: 0,
+    // 打印参数（默认值从 printManager 导入）
+    ...DEFAULT_PRINT_SETTINGS,
   },
 
 
@@ -39,6 +52,9 @@ Page({
   has: [] as any[],
   arr: [] as any[],
   l: 20,
+  
+  // 打印管理器
+  printManager: null as any,
 
   async onLoad(options: any) {
     if (options && options.id) {
@@ -47,21 +63,38 @@ Page({
       this.setData({ artworkId: `practice_${Date.now()}` })
     }
 
+    // 初始化打印管理器
+    Object.assign(this, {
+      printManager: new PrintManager(this)
+    })
+
     await this.getOpenId()
     await this.loadPermanentBackground()
     // Wait for view to stabilize?
     this.initCanvas()
+    
+    // 初始化打印相关
+    const systemInfo = wx.getSystemInfoSync()
+    const pixelRatio = systemInfo.pixelRatio || 1
+    this.setData({ pixelRatio })
+    
+    const self = this as any
+    if (self.printManager) {
+      self.printManager.initPrintCanvas()
+      // 使用 syncConnectionFromStorage 而不是 checkPrinterConnection
+      // 这样可以保持连接状态，不会在页面加载时清除已连接的设备
+      self.printManager.syncConnectionFromStorage()
+      self.printManager.loadPrintSettings()
+    }
   },
 
   onShow() {
-    // Reload background if changed in settings? 
-    // Usually settings page updates storage, so check it.
-    // editor.ts does this.
-    // But initializing canvas multiple times might be bad if we want to keep drawing.
-    // We only reload if we assume user came from settings and might have changed BG.
-    // But this clears canvas if we re-init.
-    // So maybe just check if BG changed and redraw BG?
-    // For now, simple implementation: load once on Load.
+    // 每次显示页面时同步打印机连接状态（仅在当前会话中）
+    // 如果用户在 settings 页面连接了设备，切换到 brush 页面时能看到连接状态
+    const self = this as any
+    if (self.printManager) {
+      self.printManager.syncConnectionFromStorage()
+    }
   },
 
   async getOpenId() {
@@ -250,28 +283,17 @@ Page({
                         ctx.drawImage(img, 0, 0, w, h)
                     }
                     
-                    // 3. Temp BG
-                    if (this.data.backgroundImage) {
-                        const img = canvas.createImage()
-                        await new Promise<void>((r) => { 
-                            img.onload = () => r();
-                            img.onerror = () => r();
-                            img.src = this.data.backgroundImage 
-                        })
-                        // Contain logic
-                        const iW = img.width
-                        const iH = img.height
-                        
-                        // avoid divide by zero
-                        if (iW > 0 && iH > 0) {
-                            const scale = Math.min(w / iW, h / iH)
-                            const dW = iW * scale
-                            const dH = iH * scale
-                            const dx = (w - dW) / 2
-                            const dy = (h - dH) / 2
-                            ctx.drawImage(img, dx, dy, dW, dH)
-                        }
-                    }
+                     // 3. Temp BG - 拉伸填满画布，从 (0,0) 开始，确保打印位置准确
+                     if (this.data.backgroundImage) {
+                         const img = canvas.createImage()
+                         await new Promise<void>((r) => { 
+                             img.onload = () => r();
+                             img.onerror = () => r();
+                             img.src = this.data.backgroundImage 
+                         })
+                         // 使用 fill 模式：直接拉伸填满画布，从 (0,0) 开始，确保打印位置准确
+                         ctx.drawImage(img, 0, 0, w, h)
+                     }
                     
                     // 4. Strokes (Main Canvas)
                     if (this.canvas) {
@@ -641,5 +663,151 @@ Page({
   toast(message: string, theme: 'success' | 'error' | 'loading' = 'success') {
       const t = this.selectComponent('#t-toast') as any
       if (t) t.show({ message, theme, duration: 1500 })
-  }
+  },
+
+  // ========== 打印功能 ==========
+  // 点击打印按钮 - 显示参数设置弹窗
+  onPrint() {
+    const self = this as any
+
+    // 使用打印管理器检查是否可以打印
+    if (self.printManager) {
+      const checkResult = self.printManager.canPrint()
+      if (!checkResult.canPrint) {
+        if (checkResult.message?.includes('未连接打印机')) {
+          wx.showModal({
+            title: '未连接打印机',
+            content: checkResult.message,
+            showCancel: true,
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: (res) => {
+              if (res.confirm) {
+                wx.navigateTo({ url: '/pages/settings/settings' })
+              }
+            }
+          })
+        } else {
+          this.toast(checkResult.message || '无法打印', 'error')
+        }
+        return
+      }
+    }
+
+    // 显示打印参数设置弹窗
+    this.setData({ printSettingsVisible: true })
+  },
+
+  // 关闭打印参数设置弹窗
+  onClosePrintSettings() {
+    this.setData({ printSettingsVisible: false })
+  },
+
+  // 打印参数变化处理
+  onPrintWidthChange(e: any) {
+    console.log('onPrintWidthChange', e)
+    // TDesign input 的 change 事件返回 { value: string }
+    const inputValue = e.detail?.value !== undefined ? e.detail.value : (e.detail || '')
+    const value = parseFloat(String(inputValue))
+    if (!isNaN(value) && value > 0) {
+      this.setData({ printWidth: value })
+    }
+  },
+
+  onPrintHeightChange(e: any) {
+    console.log('onPrintHeightChange', e)
+    // TDesign input 的 change 事件返回 { value: string }
+    const inputValue = e.detail?.value !== undefined ? e.detail.value : (e.detail || '')
+    const value = parseFloat(String(inputValue))
+    if (!isNaN(value) && value > 0) {
+      this.setData({ printHeight: value })
+    }
+  },
+
+  onPrintCopiesChange(e: any) {
+    console.log('onPrintCopiesChange', e)
+    // TDesign input 的 change 事件返回 { value: string }
+    const inputValue = e.detail?.value !== undefined ? e.detail.value : (e.detail || '')
+    const value = parseInt(String(inputValue))
+    if (!isNaN(value) && value > 0) {
+      this.setData({ printCopies: Math.max(1, Math.min(100, value)) })
+    }
+  },
+
+  onPrintDensityChange(e: any) {
+    const value = parseInt(e.detail.value) || 3
+    this.setData({ printDensity: Math.max(1, Math.min(9, value)) })
+  },
+
+  onPrintSpeedChange(e: any) {
+    const value = parseInt(e.detail.value) || 30
+    this.setData({ printSpeed: Math.max(15, Math.min(60, value)) })
+  },
+
+  onPrintGapChange(e: any) {
+    console.log('onPrintGapChange', e)
+    // TDesign input 的 change 事件返回 { value: string }
+    const inputValue = e.detail?.value !== undefined ? e.detail.value : (e.detail || '')
+    const value = parseFloat(String(inputValue))
+    if (!isNaN(value) && value >= 0) {
+      this.setData({ printGap: Math.max(0, Math.min(8, value)) })
+    }
+  },
+
+  // 设置旋转角度
+  onSetRotate(e: any) {
+    const value = parseInt(e.currentTarget.dataset.value) || 1
+    this.setData({ printRotate: value })
+  },
+
+  // 设置纸张类型
+  onSetPaperType(e: any) {
+    const value = parseInt(e.currentTarget.dataset.value) || 1
+    this.setData({ printPaperType: value })
+  },
+
+  // 打印参数弹窗可见性变化
+  onPrintSettingsVisibleChange(e: any) {
+    this.setData({ printSettingsVisible: e.detail.visible })
+  },
+
+  // 确认打印 - 执行实际打印操作
+  async onConfirmPrint() {
+    const self = this as any
+    
+    // 关闭参数设置弹窗
+    this.setData({ printSettingsVisible: false })
+
+    // 在打印前再次验证打印机连接状态
+    if (self.printManager) {
+      const checkResult = self.printManager.canPrint()
+      if (!checkResult.canPrint) {
+        if (checkResult.message?.includes('未连接打印机')) {
+          wx.showModal({
+            title: '未连接打印机',
+            content: checkResult.message + '，请先连接打印机后再打印',
+            showCancel: true,
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: (res) => {
+              if (res.confirm) {
+                wx.navigateTo({ url: '/pages/settings/settings' })
+              }
+            }
+          })
+        } else {
+          this.toast(checkResult.message || '无法打印', 'error')
+        }
+        return
+      }
+    }
+
+    try {
+      // 使用打印管理器执行打印，使用 getComposedImage 方法生成图片
+      await self.printManager.print('', () => this.getComposedImage())
+    } catch (error) {
+      console.error('打印失败', error)
+      // 错误已在 printManager 中处理
+    }
+  },
 })

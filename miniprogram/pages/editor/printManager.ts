@@ -37,7 +37,16 @@ export class PrintManager {
   }
 
   // 检查打印机连接状态
+  // 注意：默认不读取本地存储，只有用户主动连接后才显示已连接
+  // 这样可以确保每次打开小程序时都是未连接状态，需要重新搜索和连接
   checkPrinterConnection() {
+    // 默认设置为未连接状态，不读取本地存储
+    // 连接状态应该由 settings 页面管理，通过连接成功后的回调来更新
+    this.page.setData({ connectedDevice: null })
+  }
+
+  // 从本地存储同步连接状态（仅在用户主动连接后调用）
+  syncConnectionFromStorage() {
     const savedDevice = wx.getStorageSync('connected_printer_device')
     if (savedDevice) {
       this.page.setData({ connectedDevice: savedDevice })
@@ -88,11 +97,23 @@ export class PrintManager {
     }
 
     // 检查画布是否有内容
+    // editor 页面有 strokes 属性，brush 页面没有，所以需要分别检查
     const self = this.page as any
-    if (!self.strokes || self.strokes.length === 0) {
-      return {
-        canPrint: false,
-        message: '画布为空，无法打印'
+    if (self.strokes !== undefined) {
+      // editor 页面：检查 strokes
+      if (!self.strokes || self.strokes.length === 0) {
+        return {
+          canPrint: false,
+          message: '画布为空，无法打印'
+        }
+      }
+    } else {
+      // brush 页面：检查 canvas 是否存在（无法简单判断是否有内容，所以只检查 canvas 是否存在）
+      if (!self.canvas) {
+        return {
+          canPrint: false,
+          message: '画布未初始化，无法打印'
+        }
       }
     }
 
@@ -321,10 +342,34 @@ export class PrintManager {
         }
       })
       
-      // 直接将图片拉伸到目标尺寸（不保持宽高比，填满整个画布）
-      // 根据 SDK 文档，ImageWidth 和 ImageHeight 应该等于 Width 和 Height（纸张尺寸）
-      // 所以预处理后的图片应该完全匹配纸张尺寸，避免 SDK 缩放时出现问题
-      ctx.drawImage(img, 0, 0, finalTargetWidth, finalTargetHeight)
+      // 将图片稍微缩小一点（缩小3%），留出边距，避免边缘被裁剪和偏移问题
+      // 这样可以确保打印时图片周围有白色边距，减少偏移问题
+      const shrinkRatio = 0.97  // 缩小3%，留出边距
+      const drawWidth = finalTargetWidth * shrinkRatio
+      const drawHeight = finalTargetHeight * shrinkRatio
+      
+      // 向左偏移一点，补偿打印时的右偏移问题
+      // 计算像素偏移量：向左偏移约2-3mm（根据8像素/mm计算）
+      const leftOffsetMm = 2.5  // 向左偏移2.5mm
+      const leftOffsetPixels = Math.round(leftOffsetMm * pixelsPerMm)  // 转换为像素
+      const drawX = (finalTargetWidth - drawWidth) / 2 - leftOffsetPixels  // 居中后向左偏移
+      const drawY = (finalTargetHeight - drawHeight) / 2
+      
+      // 确保 drawX 不为负数
+      const finalDrawX = Math.max(0, drawX)
+      
+      console.log('图片预处理（缩小3%留出边距，向左偏移）:', {
+        画布尺寸: `${finalTargetWidth}x${finalTargetHeight}`,
+        绘制尺寸: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`,
+        居中位置: `(${((finalTargetWidth - drawWidth) / 2).toFixed(0)}, ${drawY.toFixed(0)})`,
+        向左偏移: `${leftOffsetMm}mm (${leftOffsetPixels}px)`,
+        最终位置: `(${finalDrawX.toFixed(0)}, ${drawY.toFixed(0)})`,
+        缩小比例: `${(shrinkRatio * 100).toFixed(1)}%`,
+        说明: '缩小图片留出边距，向左偏移补偿打印右偏移问题'
+      })
+      
+      // 绘制图片，稍微缩小并向左偏移，留出白色边距
+      ctx.drawImage(img, finalDrawX, drawY, drawWidth, drawHeight)
       
       // 导出处理后的图片
       return new Promise((resolve, reject) => {
@@ -483,10 +528,46 @@ export class PrintManager {
 
   // 执行打印
   async print(imagePath: string, getComposedImagePath: () => Promise<string>): Promise<void> {
+    // 在打印前同步连接状态，确保连接状态是最新的
+    this.syncConnectionFromStorage()
+    
     // 检查是否可以打印
     const checkResult = this.canPrint()
     if (!checkResult.canPrint) {
-      this.page.toast(checkResult.message || '无法打印', 'error')
+      // 如果是未连接打印机的错误，给出更明确的提示
+      if (checkResult.message?.includes('未连接打印机')) {
+        wx.showModal({
+          title: '未连接打印机',
+          content: checkResult.message + '，请先在设置界面连接打印机',
+          showCancel: true,
+          confirmText: '去设置',
+          cancelText: '取消',
+          success: (res) => {
+            if (res.confirm) {
+              wx.navigateTo({ url: '/pages/settings/settings' })
+            }
+          }
+        })
+      } else {
+        this.page.toast(checkResult.message || '无法打印', 'error')
+      }
+      return
+    }
+    
+    // 再次验证连接设备是否存在（双重检查）
+    if (!this.page.data.connectedDevice) {
+      wx.showModal({
+        title: '打印机未连接',
+        content: '检测到打印机未连接，请先在设置界面连接打印机',
+        showCancel: true,
+        confirmText: '去设置',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({ url: '/pages/settings/settings' })
+          }
+        }
+      })
       return
     }
 

@@ -10,7 +10,6 @@
     <view class="circle-btn" bindtap="openTools">工具</view>
 
     <view class="top-right">
-      <view class="rect-btn" bindtap="onPrint">打印</view>
       <view class="rect-btn primary" bindtap="onSave" style="position: relative;">
         保存
         <!-- 二维码浮层 -->
@@ -65,32 +64,9 @@
     </view>
   </view>
 
-  <!-- 隐藏的打印Canvas（严格按照SDK文档3.6节配置） -->
+  <!-- 用于生成二维码的隐藏 Canvas -->
   <view style="position: fixed; top: 9999px;">
-    <!-- 绘制内容 -->
-    <view>
-      <canvas 
-        width='{{templateWidth * pixelRatio}}' 
-        height='{{templateHeight * pixelRatio}}' 
-        style="width:{{templateWidth}}px;height:{{templateHeight}}px" 
-        canvas-id="Canvas" 
-        id="Canvas">
-      </canvas>
-    </view>
-    <!-- 绘制条形码（可选，当前未使用） -->
-    <view>
-      <canvas 
-        type="2d" 
-        style="width:{{barCodeWidth}}px;height:{{barCodeHeight}}px" 
-        class="ls-barcode-canvas" 
-        canvas-id="barCodels" 
-        id="barCodels">
-      </canvas>
-    </view>
-    <!-- 用于生成二维码的隐藏 Canvas -->
-    <view>
-        <canvas type="2d" id="qrCodeCanvas" style="width: 200px; height: 200px;"></canvas>
-    </view>
+    <canvas type="2d" id="qrCodeCanvas" style="width: 200px; height: 200px;"></canvas>
   </view>
 
   <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
@@ -129,144 +105,6 @@
         </view>
       </view>
 
-    </view>
-  </t-popup>
-
-  <!-- 打印参数设置弹窗 -->
-  <t-popup visible="{{printSettingsVisible}}" placement="bottom" bind:visible-change="onPrintSettingsVisibleChange">
-    <view class="sheet">
-      <view class="grabber"></view>
-      <view class="sheet-header">
-        <view>
-          <view class="sheet-title">打印参数设置</view>
-          <view class="sheet-subtitle">调整打印参数后点击确认打印</view>
-        </view>
-      </view>
-
-      <view class="print-settings-content">
-        <!-- 纸张尺寸 -->
-        <view class="setting-group">
-          <view class="setting-label">纸张尺寸（mm）</view>
-          <view class="setting-row">
-            <view class="setting-item">
-              <text class="setting-item-label">宽度</text>
-              <t-input 
-                type="digit" 
-                value="{{printWidth}}" 
-                placeholder="70"
-                bind:change="onPrintWidthChange"
-              />
-            </view>
-            <view class="setting-item">
-              <text class="setting-item-label">高度</text>
-              <t-input 
-                type="digit" 
-                value="{{printHeight}}" 
-                placeholder="100"
-                bind:change="onPrintHeightChange"
-              />
-            </view>
-          </view>
-        </view>
-
-        <!-- 打印份数 -->
-        <view class="setting-group">
-          <view class="setting-label">打印份数</view>
-          <t-input 
-            type="number" 
-            value="{{printCopies}}" 
-            placeholder="1"
-            bind:change="onPrintCopiesChange"
-          />
-        </view>
-
-        <!-- 打印密度 -->
-        <view class="setting-group">
-          <view class="setting-label">打印密度（1-9，默认3）</view>
-          <view class="slider-horizontal-box">
-            <t-slider 
-              value="{{printDensity}}" 
-              min="1" 
-              max="9" 
-              step="1" 
-              bind:change="onPrintDensityChange"
-            />
-            <text class="slider-value">{{printDensity}}</text>
-          </view>
-        </view>
-
-        <!-- 打印速度 -->
-        <view class="setting-group">
-          <view class="setting-label">打印速度（15-60，默认30）</view>
-          <view class="slider-horizontal-box">
-            <t-slider 
-              value="{{printSpeed}}" 
-              min="15" 
-              max="60" 
-              step="1" 
-              bind:change="onPrintSpeedChange"
-            />
-            <text class="slider-value">{{printSpeed}}</text>
-          </view>
-        </view>
-
-        <!-- 旋转角度 -->
-        <view class="setting-group">
-          <view class="setting-label">旋转角度</view>
-          <view class="setting-row">
-            <view 
-              class="rotate-option {{printRotate == 1 ? 'active' : ''}}"
-              bindtap="onSetRotate"
-              data-value="1"
-            >0°</view>
-            <view 
-              class="rotate-option {{printRotate == 2 ? 'active' : ''}}"
-              bindtap="onSetRotate"
-              data-value="2"
-            >90°</view>
-          </view>
-        </view>
-
-        <!-- 纸张类型 -->
-        <view class="setting-group">
-          <view class="setting-label">纸张类型</view>
-          <view class="setting-row">
-            <view 
-              class="paper-type-option {{printPaperType == 1 ? 'active' : ''}}"
-              bindtap="onSetPaperType"
-              data-value="1"
-            >间隙</view>
-            <view 
-              class="paper-type-option {{printPaperType == 2 ? 'active' : ''}}"
-              bindtap="onSetPaperType"
-              data-value="2"
-            >普通黑标</view>
-            <view 
-              class="paper-type-option {{printPaperType == 3 ? 'active' : ''}}"
-              bindtap="onSetPaperType"
-              data-value="3"
-            >连续</view>
-          </view>
-        </view>
-
-        <!-- 间隙 -->
-        <view class="setting-group">
-          <view class="setting-label">间隙（mm）</view>
-          <t-input 
-            type="digit" 
-            value="{{printGap}}" 
-            placeholder="3"
-            bind:change="onPrintGapChange"
-          />
-        </view>
-      </view>
-
-      <view class="popup-footer">
-        <view class="footer-buttons">
-          <t-button theme="default" variant="outline" block bindtap="onClosePrintSettings" style="margin-right: 16rpx;">取消</t-button>
-          <t-button theme="primary" block bindtap="onConfirmPrint">确认打印</t-button>
-        </view>
-      </view>
     </view>
   </t-popup>
 
