@@ -18,17 +18,26 @@ const CACHE_EXPIRE_TIME = 5 * 60 * 1000 // 5分钟缓存过期时间
 
 Component({
   data: {
+    paddingTop: 0,
     artworks: [] as ArtworkItem[],
     loading: false,
   },
 
   lifetimes: {
     attached() {
+      const { statusBarHeight } = wx.getSystemInfoSync()
+      this.setData({
+        paddingTop: statusBarHeight + 12
+      })
       this.loadArtworks()
     },
   },
 
   methods: {
+    goBack() {
+      wx.navigateBack()
+    },
+
     // 从缓存加载
     loadFromCache(): ArtworkItem[] | null {
       try {

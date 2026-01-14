@@ -49,6 +49,13 @@ page {
   overflow: hidden;
 }
 
+.custom-nav {
+  display: flex;
+  align-items: center;
+  padding-left: 24rpx;
+  height: 44px; /* standard nav bar height approx */
+}
+
 .artwork-image {
   position: absolute;
   top: 0;

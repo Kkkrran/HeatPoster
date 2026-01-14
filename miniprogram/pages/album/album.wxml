@@ -1,8 +1,9 @@
 <!-- 作品相册页 -->
 <view class="page">
-  <view class="header">
-    <view class="title">作品相册</view>
-    <view class="subtitle">查看所有热力图作品</view>
+  <view class="custom-nav" style="padding-top: {{paddingTop}}px">
+    <view class="back-btn" bindtap="goBack">
+      <t-icon name="chevron-left" size="48rpx" />
+    </view>
   </view>
 
   <scroll-view class="content" scroll-y>
