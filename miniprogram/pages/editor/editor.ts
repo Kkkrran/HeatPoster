@@ -15,8 +15,7 @@ interface HeatPoint {
 // 定义笔画结构（已使用，但TypeScript可能检测不到）
 // type Stroke = HeatPoint[]
 
-const MAX_EXPORT_WIDTH = 1169
-const MAX_EXPORT_HEIGHT = 1559
+// 已移除 MAX_EXPORT_WIDTH 和 MAX_EXPORT_HEIGHT，现在使用统一的标准尺寸
 
 const BRUSH_RADIUS_RANGE = { min: 6, max: 60 }
 const BRUSH_CONFIG = {
@@ -930,12 +929,26 @@ Page({
   async getComposedImagePath(): Promise<string> {
     const self = this as any
     const dpr = self.dpr
-    const width = self.width * dpr
-    const height = self.height * dpr
+    const originalWidth = self.width * dpr
+    const originalHeight = self.height * dpr
 
-    // 1. 创建一个临时的离屏 Canvas 用于合成
+    // 统一使用固定标准尺寸（基于手机参数，确保所有设备生成相同尺寸的图片）
+    // 手机参数：画布尺寸约 956x1274，宽高比约 0.75
+    // 使用固定标准尺寸：1400x1867（宽高比 0.75，接近手机画布比例）
+    const standardWidth = 1400
+    const standardHeight = 1867
+    
+    console.log('统一图片生成尺寸（固定标准尺寸，基于手机参数）:', {
+      原始尺寸: `${originalWidth}x${originalHeight}`,
+      原始宽高比: (originalWidth / originalHeight).toFixed(3),
+      标准尺寸: `${standardWidth}x${standardHeight}`,
+      标准宽高比: (standardWidth / standardHeight).toFixed(3),
+      说明: '所有设备统一使用此标准尺寸，确保SDK计算参数一致'
+    })
+
+    // 1. 创建一个临时的离屏 Canvas 用于合成（使用标准尺寸）
     // @ts-ignore
-    const offscreenCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
+    const offscreenCanvas = wx.createOffscreenCanvas({ type: '2d', width: standardWidth, height: standardHeight })
     const offscreenCtx = offscreenCanvas.getContext('2d')
 
     // 2. 先绘制常驻背景（最底层）
@@ -947,11 +960,11 @@ Page({
         permanentBgImg.onload = resolve
         permanentBgImg.onerror = resolve // 容错处理
       })
-      offscreenCtx.drawImage(permanentBgImg, 0, 0, width, height)
+      offscreenCtx.drawImage(permanentBgImg, 0, 0, standardWidth, standardHeight)
     } else {
       // 无常驻背景则填充白色底
       offscreenCtx.fillStyle = '#ffffff'
-      offscreenCtx.fillRect(0, 0, width, height)
+      offscreenCtx.fillRect(0, 0, standardWidth, standardHeight)
     }
 
     // 3. 再绘制临时背景（中间层，如果有的话）
@@ -963,52 +976,177 @@ Page({
         bgImg.onload = resolve
         bgImg.onerror = resolve // 容错处理
       })
-      offscreenCtx.drawImage(bgImg, 0, 0, width, height)
+      offscreenCtx.drawImage(bgImg, 0, 0, standardWidth, standardHeight)
     }
 
     // 4. 获取当前热力图的 ImageData 并处理颜色映射
+    // 注意：需要从原始画布尺寸获取 ImageData，然后缩放到标准尺寸
     if (self.memCtx && self.palette) {
-      const heatmapData = self.memCtx.getImageData(0, 0, width, height)
-      const pixels = heatmapData.data
+      // 从原始画布获取 ImageData
+      const originalHeatmapData = self.memCtx.getImageData(0, 0, originalWidth, originalHeight)
+      const originalPixels = originalHeatmapData.data
       const palette = self.palette
       const usePureBlack = this.data?.pureBlackBrush
 
-      for (let i = 0; i < pixels.length; i += 4) {
-        const alpha = pixels[i + 3]
+      // 处理颜色映射
+      for (let i = 0; i < originalPixels.length; i += 4) {
+        const alpha = originalPixels[i + 3]
         if (alpha > 0) {
           if (usePureBlack) {
-            pixels[i] = 0
-            pixels[i + 1] = 0
-            pixels[i + 2] = 0
-            pixels[i + 3] = alpha
+            originalPixels[i] = 0
+            originalPixels[i + 1] = 0
+            originalPixels[i + 2] = 0
+            originalPixels[i + 3] = alpha
           } else {
             const offset = alpha * 4
-            pixels[i] = palette[offset]
-            pixels[i + 1] = palette[offset + 1]
-            pixels[i + 2] = palette[offset + 2]
-            pixels[i + 3] = palette[offset + 3]
+            originalPixels[i] = palette[offset]
+            originalPixels[i + 1] = palette[offset + 1]
+            originalPixels[i + 2] = palette[offset + 2]
+            originalPixels[i + 3] = palette[offset + 3]
           }
         }
       }
 
-      // 5. 将热力图绘制到合成画布上
-      // @ts-ignore
-      const tempHeatmapCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
-      const tempHeatmapCtx = tempHeatmapCanvas.getContext('2d')
-      tempHeatmapCtx.putImageData(heatmapData, 0, 0)
+      // 检测有效内容区域（裁剪空白边缘，确保不同设备内容位置一致）
+      // 使用采样检测，提高性能
+      const sampleStep = 8
+      let minX = originalWidth, minY = originalHeight, maxX = 0, maxY = 0
+      let hasContent = false
+      let contentPixelCount = 0
+      const totalSamplePixels = Math.ceil(originalWidth / sampleStep) * Math.ceil(originalHeight / sampleStep)
       
-      offscreenCtx.drawImage(tempHeatmapCanvas, 0, 0, width, height)
+      for (let y = 0; y < originalHeight; y += sampleStep) {
+        for (let x = 0; x < originalWidth; x += sampleStep) {
+          const idx = (y * originalWidth + x) * 4
+          const r = originalPixels[idx]
+          const g = originalPixels[idx + 1]
+          const b = originalPixels[idx + 2]
+          const a = originalPixels[idx + 3]
+          
+          // 判断是否为非白色像素（更严格的判断）
+          // 白色判断：RGB 都接近 255（阈值提高到 240），或者 alpha 为 0
+          // 注意：如果画布有背景图，背景图的像素也会被检测为"内容"
+          // 所以我们需要更严格地判断：只有真正有绘制内容（热力图）的像素才算内容
+          // 但这里我们无法区分背景和热力图，所以只能通过占比来判断
+          const isWhite = (r > 240 && g > 240 && b > 240) || a === 0
+          
+          if (!isWhite) {
+            hasContent = true
+            contentPixelCount++
+            minX = Math.min(minX, x)
+            minY = Math.min(minY, y)
+            maxX = Math.max(maxX, x)
+            maxY = Math.max(maxY, y)
+          }
+        }
+      }
+      
+      // 如果内容像素占比超过 85%，说明几乎没有空白边缘，不需要裁剪
+      // 这样可以避免误裁剪导致打印空白
+      const contentRatio = hasContent ? (contentPixelCount / totalSamplePixels) : 0
+      const shouldCrop = hasContent && contentRatio < 0.85 && (maxX - minX) < originalWidth * 0.95 && (maxY - minY) < originalHeight * 0.95
+      
+      console.log('内容检测结果:', {
+        检测到内容: hasContent,
+        内容像素数: contentPixelCount,
+        总采样像素数: totalSamplePixels,
+        内容占比: `${(contentRatio * 100).toFixed(1)}%`,
+        内容区域: hasContent ? `(${minX}, ${minY}) - (${maxX}, ${maxY})` : '无',
+        内容尺寸: hasContent ? `${maxX - minX + 1}x${maxY - minY + 1}` : '0x0',
+        原始尺寸: `${originalWidth}x${originalHeight}`,
+        是否裁剪: shouldCrop,
+        说明: shouldCrop ? '检测到明显空白边缘，将进行裁剪' : '内容占比过高或无明显空白，不裁剪'
+      })
+      
+      // 扩展检测区域，确保不遗漏边缘内容
+      if (shouldCrop) {
+        minX = Math.max(0, minX - sampleStep)
+        minY = Math.max(0, minY - sampleStep)
+        maxX = Math.min(originalWidth - 1, maxX + sampleStep)
+        maxY = Math.min(originalHeight - 1, maxY + sampleStep)
+      }
+      
+      if (shouldCrop) {
+        // 计算内容区域的尺寸
+        const contentWidth = maxX - minX + 1
+        const contentHeight = maxY - minY + 1
+        
+        // 将处理后的 ImageData 绘制到临时 Canvas（只绘制有效内容区域）
+        // @ts-ignore
+        const tempHeatmapCanvas = wx.createOffscreenCanvas({ type: '2d', width: contentWidth, height: contentHeight })
+        const tempHeatmapCtx = tempHeatmapCanvas.getContext('2d')
+        
+        // 提取有效内容区域的 ImageData
+        const contentImageData = tempHeatmapCtx.createImageData(contentWidth, contentHeight)
+        const contentPixels = contentImageData.data
+        
+        for (let y = 0; y < contentHeight; y++) {
+          for (let x = 0; x < contentWidth; x++) {
+            const srcIdx = ((minY + y) * originalWidth + (minX + x)) * 4
+            const dstIdx = (y * contentWidth + x) * 4
+            contentPixels[dstIdx] = originalPixels[srcIdx]
+            contentPixels[dstIdx + 1] = originalPixels[srcIdx + 1]
+            contentPixels[dstIdx + 2] = originalPixels[srcIdx + 2]
+            contentPixels[dstIdx + 3] = originalPixels[srcIdx + 3]
+          }
+        }
+        
+        tempHeatmapCtx.putImageData(contentImageData, 0, 0)
+        
+        // 将裁剪后的内容缩放到标准尺寸并居中显示（确保边距一致）
+        // 留出固定的边距（5%），确保不同设备边距一致
+        const padding = Math.min(standardWidth * 0.05, standardHeight * 0.05)
+        const scaleX = (standardWidth - padding * 2) / contentWidth
+        const scaleY = (standardHeight - padding * 2) / contentHeight
+        const scale = Math.min(scaleX, scaleY) // 保持宽高比
+        const scaledWidth = contentWidth * scale
+        const scaledHeight = contentHeight * scale
+        const offsetX = (standardWidth - scaledWidth) / 2  // 居中
+        const offsetY = (standardHeight - scaledHeight) / 2
+        
+        console.log('内容裁剪和居中（确保边距一致）:', {
+          原始内容区域: `(${minX}, ${minY}) - (${maxX}, ${maxY})`,
+          内容尺寸: `${contentWidth}x${contentHeight}`,
+          内容占比: `${(contentRatio * 100).toFixed(1)}%`,
+          缩放比例: scale.toFixed(3),
+          居中位置: `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`,
+          边距: `${padding.toFixed(1)}px (5%)`,
+          说明: '裁剪空白边缘后居中显示，确保不同设备左边距一致'
+        })
+        
+        offscreenCtx.drawImage(tempHeatmapCanvas, offsetX, offsetY, scaledWidth, scaledHeight)
+      } else {
+        // 如果内容占比超过 90% 或没有检测到有效内容，使用原有逻辑（全图缩放居中）
+        // 这样可以避免误裁剪导致打印空白
+        // @ts-ignore
+        const tempHeatmapCanvas = wx.createOffscreenCanvas({ type: '2d', width: originalWidth, height: originalHeight })
+        const tempHeatmapCtx = tempHeatmapCanvas.getContext('2d')
+        tempHeatmapCtx.putImageData(originalHeatmapData, 0, 0)
+        
+        // 将热力图缩放到标准尺寸并绘制到合成画布上（居中显示）
+        const scaleX = standardWidth / originalWidth
+        const scaleY = standardHeight / originalHeight
+        const scale = Math.min(scaleX, scaleY) // 保持宽高比
+        const scaledWidth = originalWidth * scale
+        const scaledHeight = originalHeight * scale
+        const offsetX = (standardWidth - scaledWidth) / 2
+        const offsetY = (standardHeight - scaledHeight) / 2
+        
+        console.log('使用全图缩放（内容占比过高或未检测到有效内容）:', {
+          内容占比: hasContent ? `${(contentRatio * 100).toFixed(1)}%` : '0%',
+          原始尺寸: `${originalWidth}x${originalHeight}`,
+          缩放比例: scale.toFixed(3),
+          居中位置: `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`,
+          说明: '内容占比超过90%，不进行裁剪，直接缩放居中'
+        })
+        
+        offscreenCtx.drawImage(tempHeatmapCanvas, offsetX, offsetY, scaledWidth, scaledHeight)
+      }
     }
 
-    // Calculate export size
-    let destWidth = width
-    let destHeight = height
-
-    if (destWidth > MAX_EXPORT_WIDTH || destHeight > MAX_EXPORT_HEIGHT) {
-      const scale = Math.min(MAX_EXPORT_WIDTH / destWidth, MAX_EXPORT_HEIGHT / destHeight)
-      destWidth = Math.floor(destWidth * scale)
-      destHeight = Math.floor(destHeight * scale)
-    }
+    // 使用标准尺寸导出（不再需要缩放，因为已经统一了尺寸）
+    let destWidth = standardWidth
+    let destHeight = standardHeight
 
     // 6. 导出合成后的图片
     return new Promise((resolve, reject) => {

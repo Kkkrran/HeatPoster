@@ -177,75 +177,178 @@ export class PrintManager {
   ): Promise<string> {
     // 获取原始图片信息
     const imageInfo = await this.validateImagePath(imagePath)
-    const sourceWidth = imageInfo.width
-    const sourceHeight = imageInfo.height
+    let sourceWidth = imageInfo.width
+    let sourceHeight = imageInfo.height
     const sourceAspectRatio = sourceWidth / sourceHeight
     const targetAspectRatio = targetWidth / targetHeight
-    
-    // 如果宽高比已经匹配，直接返回原图
-    if (Math.abs(sourceAspectRatio - targetAspectRatio) < 0.01) {
-      console.log('图片宽高比已匹配，无需预处理')
-      return imagePath
-    }
     
     // 计算目标像素尺寸
     // 根据 SDK 文档，ImageWidth 和 ImageHeight 是预览图尺寸（mm）
     // SDK 会根据这个尺寸来缩放图片，所以我们需要确保图片的宽高比匹配
-    // 使用较高的分辨率来保持图片质量，SDK 会自动缩放
-    // 从调试信息看，SDK 内部使用 8 像素/mm，但我们使用更高分辨率以保持质量
+    // 从调试信息看，SDK 内部使用 8 像素/mm
     const pixelsPerMm = 8  // 与 SDK 内部处理一致
     const targetPixelWidth = Math.round(targetWidth * pixelsPerMm)
     const targetPixelHeight = Math.round(targetHeight * pixelsPerMm)
+    
+    // 计算宽高比差异
+    const aspectRatioDiff = Math.abs(sourceAspectRatio - targetAspectRatio)
     
     console.log('预处理图片:', {
       原始尺寸: `${sourceWidth}x${sourceHeight}`,
       原始宽高比: sourceAspectRatio.toFixed(3),
       目标尺寸: `${targetWidth}x${targetHeight}mm`,
       目标像素: `${targetPixelWidth}x${targetPixelHeight}`,
-      目标宽高比: targetAspectRatio.toFixed(3)
+      目标宽高比: targetAspectRatio.toFixed(3),
+      宽高比差异: aspectRatioDiff.toFixed(3),
+      尺寸缩放比例: `${(targetPixelWidth / sourceWidth).toFixed(2)}x / ${(targetPixelHeight / sourceHeight).toFixed(2)}x`
     })
+    
+    // 如果宽高比差异很大，给出警告
+    if (aspectRatioDiff > 0.1) {
+      console.warn('警告：图片宽高比与打印纸张差异较大，预处理时会拉伸图片', {
+        原始宽高比: sourceAspectRatio.toFixed(3),
+        目标宽高比: targetAspectRatio.toFixed(3),
+        差异: aspectRatioDiff.toFixed(3)
+      })
+    }
+    
+    // 如果宽高比已经匹配且尺寸接近，直接返回原图（但需要确保尺寸不超过限制）
+    // 注意：即使宽高比匹配，如果原始图片尺寸过大，也需要缩放以避免内存问题
+    const sizeMatch = Math.abs(sourceWidth - targetPixelWidth) < 10 && Math.abs(sourceHeight - targetPixelHeight) < 10
+    if (Math.abs(sourceAspectRatio - targetAspectRatio) < 0.01 && sizeMatch) {
+      console.log('图片尺寸和宽高比已匹配，无需预处理')
+      return imagePath
+    }
+    
+    // 如果原始图片尺寸过大，先进行预缩放以避免内存问题和 Canvas 限制
+    // 目标：将原始图片缩小到合理范围（不超过目标尺寸的 2 倍）
+    let preprocessedImagePath = imagePath
+    const maxSourceSize = Math.max(targetPixelWidth, targetPixelHeight) * 2 // 不超过目标尺寸的2倍
+    if (sourceWidth > maxSourceSize || sourceHeight > maxSourceSize) {
+      console.log('原始图片尺寸过大，先进行预缩放...', {
+        原始尺寸: `${sourceWidth}x${sourceHeight}`,
+        最大允许尺寸: maxSourceSize
+      })
+      
+      const preScale = Math.min(maxSourceSize / sourceWidth, maxSourceSize / sourceHeight)
+      const preScaledWidth = Math.floor(sourceWidth * preScale)
+      const preScaledHeight = Math.floor(sourceHeight * preScale)
+      
+      try {
+        // @ts-ignore
+        const preCanvas = wx.createOffscreenCanvas({ type: '2d', width: preScaledWidth, height: preScaledHeight })
+        const preCtx = preCanvas.getContext('2d')
+        
+        // @ts-ignore
+        const preImg = preCanvas.createImage()
+        preImg.src = imagePath
+        
+        await new Promise((resolve, reject) => {
+          preImg.onload = resolve
+          preImg.onerror = reject
+        })
+        
+        preCtx.drawImage(preImg, 0, 0, preScaledWidth, preScaledHeight)
+        
+        preprocessedImagePath = await new Promise((resolve, reject) => {
+          wx.canvasToTempFilePath({
+            canvas: preCanvas,
+            fileType: 'png',
+            quality: 1,
+            success: (res) => {
+              console.log('预缩放完成:', {
+                原始尺寸: `${sourceWidth}x${sourceHeight}`,
+                缩放后尺寸: `${preScaledWidth}x${preScaledHeight}`,
+                缩放比例: preScale.toFixed(3)
+              })
+              resolve(res.tempFilePath)
+            },
+            fail: reject
+          })
+        })
+        
+        // 更新图片信息
+        const preImageInfo = await this.validateImagePath(preprocessedImagePath)
+        sourceWidth = preImageInfo.width
+        sourceHeight = preImageInfo.height
+      } catch (preError) {
+        console.warn('预缩放失败，使用原始图片:', preError)
+        // 继续使用原始图片
+      }
+    }
     
     // 创建离屏 Canvas 进行图片处理
-    // @ts-ignore
-    const offscreenCanvas = wx.createOffscreenCanvas({ 
-      type: '2d', 
-      width: targetPixelWidth, 
-      height: targetPixelHeight 
-    })
-    const ctx = offscreenCanvas.getContext('2d')
+    // 注意：某些设备可能对 Canvas 尺寸有限制，如果目标尺寸过大，先进行缩放
+    let finalTargetWidth = targetPixelWidth
+    let finalTargetHeight = targetPixelHeight
+    const maxCanvasSize = 4096 // 某些设备的最大 Canvas 尺寸限制
     
-    // 填充白色背景
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, targetPixelWidth, targetPixelHeight)
-    
-    // 加载并绘制图片（保持宽高比，居中显示）
-    // @ts-ignore
-    const img = offscreenCanvas.createImage()
-    img.src = imagePath
-    
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-    })
-    
-    // 直接将图片拉伸到目标尺寸（不保持宽高比，填满整个画布）
-    // 根据 SDK 文档，ImageWidth 和 ImageHeight 应该等于 Width 和 Height（纸张尺寸）
-    // 所以预处理后的图片应该完全匹配纸张尺寸，避免 SDK 缩放时出现问题
-    ctx.drawImage(img, 0, 0, targetPixelWidth, targetPixelHeight)
-    
-    // 导出处理后的图片
-    return new Promise((resolve, reject) => {
-      wx.canvasToTempFilePath({
-        canvas: offscreenCanvas,
-        fileType: 'png',
-        quality: 1,
-        success: (res) => {
-          console.log('图片预处理完成:', res.tempFilePath)
-          resolve(res.tempFilePath)
-        },
-        fail: reject
+    // 如果目标尺寸超过限制，按比例缩放
+    if (finalTargetWidth > maxCanvasSize || finalTargetHeight > maxCanvasSize) {
+      const scale = Math.min(maxCanvasSize / finalTargetWidth, maxCanvasSize / finalTargetHeight)
+      finalTargetWidth = Math.floor(finalTargetWidth * scale)
+      finalTargetHeight = Math.floor(finalTargetHeight * scale)
+      console.warn('目标尺寸超过限制，已缩放:', {
+        原始目标: `${targetPixelWidth}x${targetPixelHeight}`,
+        缩放后: `${finalTargetWidth}x${finalTargetHeight}`,
+        缩放比例: scale.toFixed(3)
       })
-    })
+    }
+    
+    try {
+      // @ts-ignore
+      const offscreenCanvas = wx.createOffscreenCanvas({ 
+        type: '2d', 
+        width: finalTargetWidth, 
+        height: finalTargetHeight 
+      })
+      const ctx = offscreenCanvas.getContext('2d')
+      
+      // 填充白色背景
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, finalTargetWidth, finalTargetHeight)
+      
+      // 加载并绘制图片（使用预处理后的图片路径）
+      // @ts-ignore
+      const img = offscreenCanvas.createImage()
+      img.src = preprocessedImagePath
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = (err: any) => {
+          console.error('图片加载失败:', err)
+          reject(new Error('图片加载失败'))
+        }
+      })
+      
+      // 直接将图片拉伸到目标尺寸（不保持宽高比，填满整个画布）
+      // 根据 SDK 文档，ImageWidth 和 ImageHeight 应该等于 Width 和 Height（纸张尺寸）
+      // 所以预处理后的图片应该完全匹配纸张尺寸，避免 SDK 缩放时出现问题
+      ctx.drawImage(img, 0, 0, finalTargetWidth, finalTargetHeight)
+      
+      // 导出处理后的图片
+      return new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({
+          canvas: offscreenCanvas,
+          fileType: 'png',
+          quality: 1,
+          success: (res) => {
+            console.log('图片预处理完成:', {
+              路径: res.tempFilePath,
+              最终尺寸: `${finalTargetWidth}x${finalTargetHeight}`
+            })
+            resolve(res.tempFilePath)
+          },
+          fail: (err) => {
+            console.error('导出预处理图片失败:', err)
+            reject(err)
+          }
+        })
+      })
+    } catch (error) {
+      console.error('预处理图片时发生错误:', error)
+      throw new Error(`图片预处理失败: ${error}`)
+    }
   }
 
   // 验证图片路径
@@ -284,6 +387,39 @@ export class PrintManager {
     return imageInfo
   }
 
+  // 获取设备序列号（DeviceSn）
+  private getDeviceSn(): string {
+    const connectedDevice = this.page.data.connectedDevice
+    if (!connectedDevice) {
+      throw new Error('未连接打印机设备，无法获取设备序列号')
+    }
+    
+    // 尝试从设备名称中提取序列号
+    // 设备名称可能包含序列号，格式类似 "T0033A2512096269" 或 "打印机名称 T0033A2512096269"
+    if (connectedDevice.name) {
+      // 尝试匹配序列号格式：T开头，后面跟数字和字母的组合
+      const snMatch = connectedDevice.name.match(/T[A-Z0-9]{10,}/i)
+      if (snMatch) {
+        console.log('从设备名称中提取序列号:', snMatch[0])
+        return snMatch[0].toUpperCase()
+      }
+      // 如果名称本身就是序列号格式，直接使用
+      if (/^T[A-Z0-9]{10,}$/i.test(connectedDevice.name)) {
+        console.log('设备名称即为序列号:', connectedDevice.name)
+        return connectedDevice.name.toUpperCase()
+      }
+    }
+    
+    // 如果无法从名称中提取，尝试使用 deviceId（但通常 deviceId 不是序列号）
+    // 作为最后的备选方案
+    if (connectedDevice.deviceId) {
+      console.warn('无法从设备名称中提取序列号，使用 deviceId 作为备选:', connectedDevice.deviceId)
+      return connectedDevice.deviceId
+    }
+    
+    throw new Error('无法获取设备序列号：设备信息不完整')
+  }
+
   // 构建打印参数对象（严格按照 SDK 文档格式）
   buildPageImageObject(settings: PrintSettings, imageUrl: string, imageInfo?: WechatMiniprogram.GetImageInfoSuccessCallbackResult): any[] {
     // 根据文档，Rotate 应该是 1 或 2（1=0度，2=90度）
@@ -300,6 +436,15 @@ export class PrintManager {
     const imageWidth = settings.printWidth
     const imageHeight = settings.printHeight
     
+    // 获取设备序列号
+    let deviceSn: string
+    try {
+      deviceSn = this.getDeviceSn()
+    } catch (error: any) {
+      console.error('获取设备序列号失败:', error)
+      throw new Error(`获取设备序列号失败: ${error.message}`)
+    }
+    
     if (imageInfo) {
       const imagePixelWidth = imageInfo.width
       const imagePixelHeight = imageInfo.height
@@ -313,7 +458,7 @@ export class PrintManager {
         纸张宽高比: paperAspectRatio.toFixed(3),
         ImageWidth: `${imageWidth}mm (预览图宽度)`,
         ImageHeight: `${imageHeight}mm (预览图高度)`,
-        宽高比匹配: Math.abs(imageAspectRatio - paperAspectRatio) < 0.01 ? '是' : '否'
+        设备序列号: deviceSn
       })
     }
     
@@ -328,7 +473,7 @@ export class PrintManager {
       "VerticalNum": 0,                     // 垂直偏移（mm）
       "PaperType": settings.printPaperType, // 纸张类型
       "Gap": settings.printGap,            // 纸张间隙（mm）
-      "DeviceSn": 'T0033A2512096269', // 蓝牙序列号
+      "DeviceSn": deviceSn,                // 蓝牙序列号（动态获取）
       "ImageUrl": imageUrl,                 // 打印图片地址（https开头）
       "ImageWidth": imageWidth,             // 预览图图片宽（mm）
       "ImageHeight": imageHeight,           // 预览图图片高（mm）
@@ -360,13 +505,46 @@ export class PrintManager {
     // 不再保存参数到本地存储
 
     try {
+      // 记录设备信息，用于调试不同设备上的问题
+      const systemInfo = wx.getSystemInfoSync()
+      const pageSelf = this.page as any
+      
+      // 计算打印纸张的宽高比（70mm × 100mm = 0.7）
+      const printAspectRatio = settings.printWidth / settings.printHeight
+      
+      // 获取原始画布尺寸
+      const originalWidth = pageSelf.width || 0
+      const originalHeight = pageSelf.height || 0
+      const originalDpr = pageSelf.dpr || 1
+      const originalAspectRatio = originalWidth > 0 && originalHeight > 0 ? originalWidth / originalHeight : printAspectRatio
+      
+      console.log('设备信息:', {
+        设备型号: systemInfo.model,
+        屏幕宽度: systemInfo.windowWidth,
+        屏幕高度: systemInfo.windowHeight,
+        像素比: systemInfo.pixelRatio,
+        画布逻辑尺寸: `${originalWidth}x${originalHeight}`,
+        画布实际尺寸: `${originalWidth * originalDpr}x${originalHeight * originalDpr}`,
+        画布宽高比: originalAspectRatio.toFixed(3),
+        打印纸张宽高比: printAspectRatio.toFixed(3),
+        DPR: originalDpr
+      })
+      
       this.page.toast('正在生成图片...', 'loading')
       
       // 生成合成图片（如果 imagePath 为空，则调用 getComposedImagePath）
       let composedPath = imagePath || await getComposedImagePath()
       
-      // 验证图片路径
-      await this.validateImagePath(composedPath)
+      // 记录生成的图片信息
+      const composedImageInfo = await this.validateImagePath(composedPath)
+      console.log('生成的合成图片信息:', {
+        路径: composedPath,
+        宽度: composedImageInfo.width,
+        高度: composedImageInfo.height,
+        宽高比: (composedImageInfo.width / composedImageInfo.height).toFixed(3),
+        期望打印宽高比: printAspectRatio.toFixed(3),
+        宽高比差异: Math.abs(composedImageInfo.width / composedImageInfo.height - printAspectRatio).toFixed(3)
+      })
       
       // 预处理图片：将图片调整为匹配打印纸张的尺寸和宽高比
       // SDK 会根据 Width 和 Height 来缩放图片，所以我们需要提前调整图片宽高比
@@ -378,6 +556,13 @@ export class PrintManager {
       
       // 重新获取处理后的图片信息
       const processedImageInfo = await this.validateImagePath(processedPath)
+      console.log('预处理后图片信息:', {
+        路径: processedPath,
+        宽度: processedImageInfo.width,
+        高度: processedImageInfo.height,
+        宽高比: (processedImageInfo.width / processedImageInfo.height).toFixed(3),
+        期望尺寸: `${Math.round(settings.printWidth * 8)}x${Math.round(settings.printHeight * 8)}`
+      })
       
       // 处理图片URL（如果是本地路径，上传到云存储）
       let finalImageUrl = processedPath
@@ -413,33 +598,84 @@ export class PrintManager {
       
       // 调用打印SDK（严格按照SDK文档3.11节）
       return new Promise((resolve, reject) => {
+        let hasReceivedProgress = false
+        let hasReceivedSuccess = false
+        
+        // 设置超时检测（30秒）
+        const timeoutId = setTimeout(() => {
+          if (!hasReceivedSuccess) {
+            console.warn('打印超时：30秒内未收到成功回调')
+            const systemInfo = wx.getSystemInfoSync()
+            console.warn('设备信息:', {
+              设备型号: systemInfo.model,
+              屏幕宽度: systemInfo.windowWidth,
+              屏幕高度: systemInfo.windowHeight,
+              像素比: systemInfo.pixelRatio
+            })
+            // 不 reject，因为可能打印正在进行中，只是回调延迟
+            // 提示用户检查打印机状态
+            this.page.toast('打印可能正在进行，请检查打印机状态', 'loading')
+          }
+        }, 30000)
+        
         bleToothManage.doPrintImage(this.page.data.canvasText, PageImageObject, (res: any) => {
           console.log('打印图片回调', res)
+          
+          // ResultCode: 100 表示打印进度回调（返回画布尺寸信息）
           if (res.ResultCode == 100) {
-            // 打印进度回调（SDK文档3.11节：返回画布尺寸信息）
+            hasReceivedProgress = true
             let resultValue = res.ResultValue
-            console.log('打印尺寸:', resultValue.width, resultValue.height)
+            console.log('打印进度回调 - 画布尺寸:', resultValue.width, resultValue.height)
             // 更新 Canvas 尺寸（SDK文档3.11节）
             this.page.setData({
               templateWidth: resultValue.width || 400,
               templateHeight: resultValue.height || 240,
             })
-          } else if (res.ResultCode == constants.globalResultCode.ResultCodeSuccess) {
-            // 打印完成
+            // 进度回调不 resolve，继续等待完成回调
+            return
+          }
+          
+          // ResultCode: 0 表示打印成功（根据 SDK 文档和 Constants.js，ResultCodeSuccess = 0）
+          if (res.ResultCode == 0 || res.ResultCode == constants.globalResultCode.ResultCodeSuccess) {
+            hasReceivedSuccess = true
+            clearTimeout(timeoutId)
+            
+            const systemInfo = wx.getSystemInfoSync()
+            console.log('打印成功完成', {
+              ResultCode: res.ResultCode,
+              ResultValue: res.ResultValue,
+              ErrorMsg: res.ErrorMsg,
+              设备信息: {
+                设备型号: systemInfo.model,
+                屏幕宽度: systemInfo.windowWidth,
+                屏幕高度: systemInfo.windowHeight,
+                像素比: systemInfo.pixelRatio
+              },
+              是否收到进度回调: hasReceivedProgress
+            })
             this.page.toast('打印完成', 'success')
             resolve()
-          } else {
-            // 打印失败，显示详细错误信息
-            const errorMsg = res.ErrorMsg?.ErrMsg || res.ErrorMsg || `错误码: ${res.ResultCode}`
-            console.error('打印失败详情:', {
-              ResultCode: res.ResultCode,
-              ErrorMsg: res.ErrorMsg,
-              ResultValue: res.ResultValue
-            })
-            this.page.toast(`打印失败: ${errorMsg}`, 'error')
-            reject(new Error(errorMsg))
+            return
           }
+          
+          // 其他 ResultCode 表示打印失败
+          clearTimeout(timeoutId)
+          const errorMsg = res.ErrorMsg?.ErrMsg || res.ErrorMsg?.msg || res.ErrorMsg || `错误码: ${res.ResultCode}`
+          console.error('打印失败详情:', {
+            ResultCode: res.ResultCode,
+            ErrorMsg: res.ErrorMsg,
+            ResultValue: res.ResultValue,
+            期望成功码: constants.globalResultCode.ResultCodeSuccess,
+            设备信息: {
+              设备型号: wx.getSystemInfoSync().model,
+              屏幕宽度: wx.getSystemInfoSync().windowWidth,
+              屏幕高度: wx.getSystemInfoSync().windowHeight
+            }
+          })
+          this.page.toast(`打印失败: ${errorMsg}`, 'error')
+          reject(new Error(errorMsg))
         }).catch((error: any) => {
+          clearTimeout(timeoutId)
           console.log('打印图片失败', error)
           const errorMsg = error?.ErrorMsg?.ErrMsg || error?.message || '未知错误'
           this.page.toast(`打印失败: ${errorMsg}`, 'error')
