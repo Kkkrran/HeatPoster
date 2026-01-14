@@ -9,6 +9,8 @@ page {
   flex-direction: column;
 }
 
+/* 移除强制 16:9 的媒体查询 */
+
 .header {
   padding: 32rpx 32rpx 16rpx;
 }
@@ -27,26 +29,36 @@ page {
 
 .content {
   flex: 1;
-  padding: 0 16rpx 32rpx;
+  padding: 0 10vw 32rpx; /* 使用 padding 来控制两侧留白，更自然适应不同屏幕 */
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4rpx;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24rpx;
   padding-top: 16rpx;
+  /* 移除固定宽度和 margin-auto，让 grid 自然填充 content 区域 */
 }
 
 .grid-item {
   position: relative;
   overflow: hidden;
   background: #ffffff;
+  border-radius: 8rpx;
 }
 
 .image-wrapper {
   width: 100%;
+  padding-bottom: 133.33%; /* 3:4 ratio */
   position: relative;
   overflow: hidden;
+}
+
+.custom-nav {
+  display: flex;
+  align-items: center;
+  padding-left: 24rpx;
+  height: 44px; /* standard nav bar height approx */
 }
 
 .artwork-image {

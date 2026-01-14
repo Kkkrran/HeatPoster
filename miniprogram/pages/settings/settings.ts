@@ -15,7 +15,9 @@ interface BluetoothDevice {
 const STORAGE_KEYS = {
   EXIT_CONFIRM: 'editor_exit_confirm',
   MAX_UNDO: 'editor_max_undo_steps',
-  PURE_BLACK_BRUSH: 'editor_pure_black_brush'
+  PURE_BLACK_BRUSH: 'editor_pure_black_brush',
+  ALBUM_SCROLL_SPEED: 'album_scroll_speed',
+  ALBUM_WAIT_TIME: 'album_wait_time'
 }
 
 Component({
@@ -23,6 +25,8 @@ Component({
     exitConfirm: false,
     maxUndoSteps: 10,
     pureBlackBrush: false,
+    scrollSpeed: 20, // 默认速度
+    scrollWaitTime: 5, // 默认等待5秒
     limitDialogVisible: false,
     tempLimitValue: '',
     blueList: [],
@@ -42,6 +46,9 @@ Component({
       
       const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 10
       
+      const scrollSpeed = wx.getStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED) || 20
+      const scrollWaitTime = wx.getStorageSync(STORAGE_KEYS.ALBUM_WAIT_TIME)
+      
       const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
       
       // 不自动加载已保存的打印机连接信息
@@ -55,7 +62,9 @@ Component({
       self.setData({ 
         exitConfirm, 
         maxUndoSteps,
-        pureBlackBrush
+        pureBlackBrush,
+        scrollSpeed,
+        scrollWaitTime: scrollWaitTime === '' ? 5 : scrollWaitTime
       })
     }
   },
@@ -97,16 +106,17 @@ Component({
       // 重新加载退出确认设置
       let exitConfirm = wx.getStorageSync('editor_exit_confirm')
       if (exitConfirm === '') exitConfirm = false // 默认为关闭
-
-      // 重新加载撤销步数限制设置
-      const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
-      const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
-
-      // 重新加载选择的背景
+      
+      const scrollSpeed = wx.getStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED) || 20
+      const scrollWaitTime = wx.getStorageSync(STORAGE_KEYS.ALBUM_WAIT_TIME)
+      
+      self.setData({ 
+        exitConfirm,
+        scrollSpeed,
+        scrollWaitTime: scrollWaitTime === '' ? 5 : scrollWaitTime
+      })
+      
       self.loadSelectedBackground()
-
-      // 更新所有设置到页面数据
-      self.setData({ exitConfirm, maxUndoSteps, pureBlackBrush })
     },
 
     onExitConfirmChange(e: any) {

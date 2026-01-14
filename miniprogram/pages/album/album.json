@@ -1,7 +1,10 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "作品相册",
+  "pageOrientation": "landscape",
   "usingComponents": {
-    "t-empty": "tdesign-miniprogram/empty/empty"
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-icon": "tdesign-miniprogram/icon/icon"
   }
 }
 

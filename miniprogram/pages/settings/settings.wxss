@@ -251,3 +251,7 @@ page {
   flex: 1;
   text-align: right;
 }
+
+.server-slider {
+  width: 200rpx;
+}

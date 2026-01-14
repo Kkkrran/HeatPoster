@@ -27,5 +27,6 @@
     "downloadFile": 10000
   },
   "componentFramework": "glass-easel",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "resizable": true
 }
