@@ -533,7 +533,7 @@ Page({
       // 生成快照以解决原生 Canvas 遮挡 Popup 的问题
       wx.canvasToTempFilePath({
         canvas: self.canvas,
-        fileType: 'png',
+        fileType: 'jpg',
         quality: 0.8,
         success: (res) => {
           this.setData({
@@ -672,6 +672,8 @@ Page({
     if (self.canvas) {
         wx.canvasToTempFilePath({
             canvas: self.canvas,
+            fileType: 'jpg',
+            quality: 0.8,
             success: (res) => {
                 this.setData({
                     snapshotUrl: res.tempFilePath,
@@ -747,7 +749,7 @@ Page({
       const composedImagePath = await this.getComposedImagePath()
 
       const { fileID: thumbnailFileId } = await wx.cloud.uploadFile({
-        cloudPath: `artworks/${openid}/${id}_thumb.png`,
+        cloudPath: `artworks/${openid}/${id}_thumb.jpg`,
         filePath: composedImagePath
       })
         
@@ -927,6 +929,10 @@ Page({
     const offscreenCanvas = wx.createOffscreenCanvas({ type: '2d', width: standardWidth, height: standardHeight })
     const offscreenCtx = offscreenCanvas.getContext('2d')
 
+    // 预先填充白色背景，确保转换jpg时无透明底问题
+    offscreenCtx.fillStyle = '#ffffff'
+    offscreenCtx.fillRect(0, 0, standardWidth, standardHeight)
+
     // 2. 先绘制常驻背景（最底层）
     if (this.data.permanentBackgroundImage) {
       // @ts-ignore - 离屏 Canvas 的 createImage 方法
@@ -937,11 +943,8 @@ Page({
         permanentBgImg.onerror = resolve // 容错处理
       })
       offscreenCtx.drawImage(permanentBgImg, 0, 0, standardWidth, standardHeight)
-    } else {
-      // 无常驻背景则填充白色底
-      offscreenCtx.fillStyle = '#ffffff'
-      offscreenCtx.fillRect(0, 0, standardWidth, standardHeight)
-    }
+    } 
+    // else { // 已在上方统一填充白色，此处无需处理 }
 
     // 3. 再绘制临时背景（中间层，如果有的话）
     if (this.data.backgroundImage) {
@@ -1113,8 +1116,8 @@ Page({
         canvas: offscreenCanvas,
         destWidth: destWidth,
         destHeight: destHeight,
-        fileType: 'png',
-        quality: 1,
+        fileType: 'jpg',
+        quality: 0.9,
         success: (res) => resolve(res.tempFilePath),
         fail: reject
       })

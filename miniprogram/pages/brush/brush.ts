@@ -314,7 +314,8 @@ Page({
                     setTimeout(() => {
                         wx.canvasToTempFilePath({
                             canvas: canvas,
-                            fileType: 'png',
+                            fileType: 'jpg',
+                            quality: 0.9,
                             success: (r) => resolve(r.tempFilePath),
                             fail: reject
                         })
@@ -332,7 +333,8 @@ Page({
       // 准备打开，先生成快照
       wx.canvasToTempFilePath({
         canvas: this.canvas,
-        fileType: 'png',
+        fileType: 'jpg',
+        quality: 0.8,
         success: (res) => {
           this.setData({
             snapshotUrl: res.tempFilePath,
@@ -542,6 +544,8 @@ Page({
      if (this.canvas) {
         wx.canvasToTempFilePath({
             canvas: this.canvas,
+            fileType: 'jpg',
+            quality: 0.8,
             success: (res) => {
                 this.setData({
                     snapshotUrl: res.tempFilePath,
@@ -567,7 +571,7 @@ Page({
          
          const openid = this.data.openid || 'unknown'
          const id = this.data.artworkId
-         const cloudPath = `MaoBi/${openid}/${id}.png`
+         const cloudPath = `MaoBi/${openid}/${id}.jpg`
          
          const uploadRes = await wx.cloud.uploadFile({
              cloudPath,

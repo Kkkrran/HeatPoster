@@ -13,7 +13,7 @@
         <!-- 二维码浮层 -->
         <view class="qrcode-popup" wx:if="{{qrCodeUrl}}" catchtap="preventBubble">
           <image class="qrcode-img" src="{{qrCodeUrl}}" show-menu-by-longpress mode="aspectFit"/>
-          <view class="qrcode-tip">微信扫码，下载本作品</view>
+          <view class="qrcode-tip">微信扫码，再浏览器打开，下载本作品</view>
         </view>
       </view>
     </view>

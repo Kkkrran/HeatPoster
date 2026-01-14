@@ -135,7 +135,7 @@ export class PrintManager {
     
     try {
       const timestamp = Date.now()
-      const cloudPath = `print_temp/${openid}/${timestamp}_print.png`
+      const cloudPath = `print_temp/${openid}/${timestamp}_print.jpg`
       
       // 上传到云存储
       const uploadRes = await wx.cloud.uploadFile({
@@ -274,8 +274,8 @@ export class PrintManager {
         preprocessedImagePath = await new Promise((resolve, reject) => {
           wx.canvasToTempFilePath({
             canvas: preCanvas,
-            fileType: 'png',
-            quality: 1,
+            fileType: 'jpg',
+            quality: 0.9,
             success: (res) => {
               console.log('预缩放完成:', {
                 原始尺寸: `${sourceWidth}x${sourceHeight}`,
@@ -375,8 +375,8 @@ export class PrintManager {
       return new Promise((resolve, reject) => {
         wx.canvasToTempFilePath({
           canvas: offscreenCanvas,
-          fileType: 'png',
-          quality: 1,
+          fileType: 'jpg',
+          quality: 0.9,
           success: (res) => {
             console.log('图片预处理完成:', {
               路径: res.tempFilePath,
