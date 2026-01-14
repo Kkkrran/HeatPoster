@@ -8,9 +8,11 @@
     <t-cell-group>
       <t-cell title="常驻背景选择" description="{{selectedBgFileName || '选择应用常驻背景图片'}}" bindtap="onGoBgSelect" arrow />
       <t-cell title="相册" description="查看所有热力图作品" bindtap="onGoAlbum" arrow />
+<!--
       <t-cell title="纯黑画笔" description="开启后画笔颜色固定为黑色">
         <t-switch slot="note" value="{{pureBlackBrush}}" bind:change="onPureBlackBrushChange" />
       </t-cell>
+-->
       <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
         <view slot="note">
           <t-button variant="outline" size="small" theme="default" bindtap="onClearCache">清理</t-button>
