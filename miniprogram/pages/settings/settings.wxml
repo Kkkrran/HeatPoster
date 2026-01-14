@@ -6,7 +6,8 @@
   
   <view class="section">
     <t-cell-group>
-      <t-cell title="常驻背景选择" description="{{selectedBgFileName || '选择应用常驻背景图片'}}" bindtap="onGoBgSelect" arrow />
+      <t-cell title="选择热力图背景" description="{{selectedBgEditorName }}" bindtap="onGoBgSelectEditor" arrow />
+      <t-cell title="选择毛笔页背景" description="{{selectedBgBrushName }}" bindtap="onGoBgSelectBrush" arrow />
       <t-cell title="相册" description="查看所有热力图作品" bindtap="onGoAlbum" arrow />
 <!--
       <t-cell title="纯黑画笔" description="开启后画笔颜色固定为黑色">

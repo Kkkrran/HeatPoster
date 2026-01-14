@@ -89,6 +89,7 @@ Page({
   },
 
   onShow() {
+    this.loadPermanentBackground()
     // 每次显示页面时同步打印机连接状态（仅在当前会话中）
     // 如果用户在 settings 页面连接了设备，切换到 brush 页面时能看到连接状态
     const self = this as any
@@ -114,21 +115,30 @@ Page({
 
   async loadPermanentBackground() {
     try {
-      let selectedBg = wx.getStorageSync('selected_background')
+      let selectedBg = wx.getStorageSync('selected_background_brush')
       
-      // 如果没有缓存，则使用默认背景
+      // 兼容性
       if (!selectedBg) {
-        selectedBg = {
-           name: '默认背景',
-           tempFilePath: '/images/bglocal.png'
-        }
-        // 对于本地默认背景，尝试获取信息
-        try {
-           const imageInfo = await wx.getImageInfo({ src: selectedBg.tempFilePath })
-           selectedBg.aspectRatio = imageInfo.width / imageInfo.height
-        } catch(e) {
-           // 如果获取信息也失败，可能默认背景图也不存在，则不设置
-           console.warn('Cannot load default bg info', e)
+        selectedBg = wx.getStorageSync('selected_background')
+      }
+
+      // 如果没有缓存，尝试加载默认背景 (bgbrush.*)
+      if (!selectedBg) {
+        const extensions = ['.png', '.jpg', '.jpeg']
+        for (const ext of extensions) {
+           const path = `/images/bgbrush${ext}`
+           try {
+             const imageInfo = await wx.getImageInfo({ src: path })
+             
+             selectedBg = {
+               name: `bgbrush${ext}`,
+               tempFilePath: path,
+               aspectRatio: imageInfo.width / imageInfo.height
+             }
+             break; 
+           } catch(e) {
+             // ignore
+           }
         }
       }
 

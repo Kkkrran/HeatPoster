@@ -10,114 +10,76 @@ Component({
   data: {
     backgrounds: [] as BackgroundItem[],
     loading: false,
+    target: 'editor', // 'editor' or 'brush'
   },
 
   lifetimes: {
     attached() {
-      this.loadBackgrounds()
+      // Moved to onLoad
     },
   },
 
   methods: {
+    onLoad(options: any) {
+      if (options && options.target) {
+        this.setData({ target: options.target })
+      }
+      this.loadBackgrounds()
+    },
+
     async loadBackgrounds() {
       this.setData({ loading: true })
       
-      const basePath = 'cloud://art-9g2yt6t89a45335b.6172-art-9g2yt6t89a45335b-1393918820/backgrounds/'
       const backgrounds: BackgroundItem[] = []
+      
+      // 确定存储键名
+      const target = (this as any).data.target
+      
+      // 1. 加载目标背景 (位于本地 /images/ 目录)
+      const fileNameBase = target === 'brush' ? 'bgbrush' : 'bgeditor'
+      const extensions = ['.png', '.jpg', '.jpeg']
 
-      // 1. 加载本地背景 bglocal.png
-      try {
-        const localBgPath = '/images/bglocal.png'
-        const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-          wx.getImageInfo({
-            src: localBgPath,
-            success: resolve,
-            fail: reject,
-          })
-        })
-        backgrounds.push({
-          name: '默认背景',
-          fileID: '', // 本地文件无 cloud ID
-          tempFilePath: localBgPath,
-          aspectRatio: imageInfo.width / imageInfo.height,
-        })
-      } catch (err) {
-        console.error('加载本地背景失败', err)
+      for (const ext of extensions) {
+        const name = `${fileNameBase}${ext}`
+        const path = `/images/${name}`
+
+        try {
+            const imageInfo = await this.getImageInfo(path)
+            backgrounds.push({
+                name: name,
+                fileID: '',
+                tempFilePath: path,
+                aspectRatio: imageInfo.width / imageInfo.height
+            })
+        } catch (e) {
+            // Ignore if file doesn't exist
+        }
       }
+      
+      this.setData({ backgrounds: backgrounds, loading: false })
 
-      // 如果当前没有选中的背景，默认使用第一个（bglocal.png）如果不为空
-       const currentBg = wx.getStorageSync('selected_background')
-       if (!currentBg && backgrounds.length > 0) {
+      // 如果当前没有选中的背景，且有可用背景，则默认选中第一个
+      const storageKey = target === 'brush' ? 'selected_background_brush' : 'selected_background_editor'
+      const currentBg = wx.getStorageSync(storageKey)
+      if (!currentBg && backgrounds.length > 0) {
            const bg = backgrounds[0]
-           wx.setStorageSync('selected_background', {
+           wx.setStorageSync(storageKey, {
                 name: bg.name,
                 fileID: bg.fileID,
                 tempFilePath: bg.tempFilePath,
                 aspectRatio: bg.aspectRatio, // 保存宽高比
             })
        }
-
-      // 2. 尝试加载云端背景 bg1 到 bg10
-      const cloudBackgrounds: BackgroundItem[] = []
-      const loadPromises = []
-      for (let i = 1; i <= 10; i++) {
-        const fileID = `${basePath}bg${i}.png`
-        loadPromises.push(
-          this.tryLoadBackground(fileID, `bg${i}`)
-            .then(item => {
-              if (item) {
-                cloudBackgrounds.push(item)
-              }
-            })
-            .catch(() => {
-              // 忽略不存在的文件
-            })
-        )
-      }
-
-      await Promise.all(loadPromises)
-      
-      // 按名称排序云端背景
-      cloudBackgrounds.sort((a, b) => {
-        const numA = parseInt(a.name.replace('bg', ''))
-        const numB = parseInt(b.name.replace('bg', ''))
-        return numA - numB
-      })
-      
-      // 合并本地背景和云端背景
-      this.setData({ backgrounds: backgrounds.concat(cloudBackgrounds), loading: false })
     },
 
-    async tryLoadBackground(fileID: string, name: string): Promise<BackgroundItem | null> {
-      try {
-        const downloadRes = await wx.cloud.downloadFile({ fileID })
-        
-        // 获取图片信息以计算宽高比
-        let aspectRatio: number | undefined
-        try {
-          const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-            wx.getImageInfo({
-              src: downloadRes.tempFilePath,
-              success: resolve,
-              fail: reject,
-            })
+    getImageInfo(path: string): Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult> {
+        return new Promise((resolve, reject) => {
+          wx.getImageInfo({
+            src: path,
+            success: resolve,
+            fail: reject,
           })
-          aspectRatio = imageInfo.width / imageInfo.height
-        } catch (err) {
-          console.warn('获取图片信息失败', err)
-          // 如果获取图片信息失败，使用默认宽高比或留空
-        }
-        
-        return {
-          name,
-          fileID,
-          tempFilePath: downloadRes.tempFilePath,
-          aspectRatio,
-        }
-      } catch (err) {
-        // 文件不存在，返回 null
-        return null
-      }
+        })
     },
 
     onSelectBg(e: any) {
@@ -125,13 +87,19 @@ Component({
       const bg = this.data.backgrounds[index]
       if (!bg) return
 
+      const target = (this as any).data.target
+      const storageKey = target === 'brush' ? 'selected_background_brush' : 'selected_background_editor'
+
       // 保存选择的背景到本地存储
-      wx.setStorageSync('selected_background', {
+      wx.setStorageSync(storageKey, {
         name: bg.name,
         fileID: bg.fileID,
         tempFilePath: bg.tempFilePath,
         aspectRatio: bg.aspectRatio, // 保存宽高比
       })
+      
+      // Also save to 'selected_background' for compatibility if needed, but avoiding conflict logic
+      // wx.setStorageSync('selected_background', ...) // Removed to separate control
 
       // 显示选择成功的提示
       wx.showToast({
@@ -142,15 +110,18 @@ Component({
     },
 
     onSelectNoBg() {
-      // 清除常驻背景，这将导致恢复默认背景 (bglocal.png)
-      wx.removeStorageSync('selected_background')
+      const target = (this as any).data.target
+      const storageKey = target === 'brush' ? 'selected_background_brush' : 'selected_background_editor'
 
-      // 重新触发加载逻辑，确保缓存被重置为默认背景
+      // 清除常驻背景，这将导致恢复可能存在的默认背景 (bgeditor/bgbrush)
+      wx.removeStorageSync(storageKey)
+
+      // 重新触发加载逻辑，确保缓存被重置为默认背景(如果存在)
       this.loadBackgrounds()
 
       // 显示选择成功的提示
       wx.showToast({
-        title: '已重置为默认背景',
+        title: '已重置',
         icon: 'success',
         duration: 1500,
       })
