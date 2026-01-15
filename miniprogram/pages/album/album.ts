@@ -21,17 +21,26 @@ Component({
     paddingTop: 0,
     artworks: [] as ArtworkItem[],
     loading: false,
+    height: 0,
+    scrollTop: 0,
   },
 
   lifetimes: {
     attached() {
       // @ts-ignore
       const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
-      const { statusBarHeight } = systemInfo
+      const { statusBarHeight, windowHeight } = systemInfo
       this.setData({
-        paddingTop: statusBarHeight + 12
+        paddingTop: statusBarHeight + 12,
+        height: windowHeight
       })
       this.loadArtworks()
+    },
+    detached() {
+      if ((this as any)._scrollTimer) {
+        clearInterval((this as any)._scrollTimer);
+        (this as any)._scrollTimer = null
+      }
     },
   },
 
@@ -89,7 +98,9 @@ Component({
       if (!forceRefresh) {
         const cachedArtworks = this.loadFromCache()
         if (cachedArtworks && cachedArtworks.length > 0) {
-          this.setData({ artworks: cachedArtworks, loading: false })
+          this.setData({ artworks: cachedArtworks, loading: false }, () => {
+            this.startAutoScroll()
+          })
           // 后台刷新数据
           this.loadArtworks(true)
           return
@@ -182,7 +193,9 @@ Component({
         // 保存到缓存
         this.saveToCache(artworks)
 
-        this.setData({ artworks, loading: false })
+        this.setData({ artworks, loading: false }, () => {
+          this.startAutoScroll()
+        })
       } catch (err: any) {
         console.error('加载作品失败', err)
         wx.showToast({ title: '加载失败', icon: 'none' })
@@ -219,6 +232,47 @@ Component({
       } catch (err) {
         console.warn('保存宽高比缓存失败', err)
       }
+    },
+
+    startAutoScroll() {
+      // @ts-ignore
+      if (this._scrollTimer) clearInterval(this._scrollTimer)
+
+      // 延迟确保渲染完成
+      setTimeout(() => {
+        this.createSelectorQuery()
+          .select('.content')
+          .boundingClientRect()
+          .select('.grid')
+          .boundingClientRect()
+          .exec((res) => {
+            if (!res[0] || !res[1]) return
+            
+            const scrollViewHeight = res[0].height
+            const contentHeight = res[1].height
+            const maxScroll = contentHeight - scrollViewHeight
+
+            if (maxScroll <= 0) return
+
+            console.log('开始自动滚动，最大滚动距离:', maxScroll)
+            
+            let currentTop = 0
+            this.setData({ scrollTop: 0 })
+
+            // @ts-ignore
+            this._scrollTimer = setInterval(() => {
+              if (currentTop >= maxScroll) {
+                // @ts-ignore
+                clearInterval(this._scrollTimer)
+                return
+              }
+              currentTop += 1
+              this.setData({
+                scrollTop: currentTop
+              })
+            }, 50)
+          })
+      }, 1000)
     },
   },
 })

@@ -9,6 +9,8 @@
   <scroll-view 
     class="content" 
     scroll-y 
+    style="height:{{height-50}}px;" 
+    scroll-top="{{scrollTop}}"
   >
     <view class="grid" wx:if="{{artworks.length > 0}}">
       <view class="grid-item" wx:for="{{artworks}}" wx:key="id">
