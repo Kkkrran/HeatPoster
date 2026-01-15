@@ -67,19 +67,6 @@
 
   <view class="section">
     <view class="card">
-      <view class="card-title">云存储</view>
-      <view class="card-desc">从云存储读取图片文件</view>
-      <view class="card-actions">
-        <t-button theme="primary" size="small" bindtap="onLoadCloudImage">读取云存储</t-button>
-      </view>
-      <view class="cloud-image-container" wx:if="{{cloudImageUrl}}">
-        <image class="cloud-image" src="{{cloudImageUrl}}" mode="aspectFit"></image>
-      </view>
-    </view>
-  </view>
-
-  <view class="section">
-    <view class="card">
       <view class="card-title">相册导出</view>
       <view class="card-desc">导出作品到系统相册需要 <text class="em">scope.writePhotosAlbum</text> 授权。</view>
       <view class="card-actions">

@@ -23,6 +23,41 @@ const BRUSH_CONFIG = {
 
 const clampValue = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
+// 压缩笔触数据：将对象数组转换为紧凑的数组格式，并保留必要精度
+// [{x,y,r,opacity}, ...] -> [[x,y,r,opacity], ...]
+const compressStrokes = (strokes: HeatPoint[][]): any[][] => {
+  return strokes.map(stroke =>
+    stroke.map(p => [
+      Math.round(p.x * 10) / 10,       // x: 保留1位小数
+      Math.round(p.y * 10) / 10,       // y: 保留1位小数
+      Math.round(p.r),                 // r:取整
+      Math.round(p.opacity * 1000) / 1000 // opacity: 保留3位小数
+    ])
+  )
+}
+
+// 解压笔触数据：兼容旧格式（对象）和新格式（数组）
+const decompressStrokes = (data: any[]): HeatPoint[][] => {
+  if (!data || !Array.isArray(data)) return []
+
+  return data.map((stroke: any[]) => {
+    if (!Array.isArray(stroke)) return []
+    return stroke.map((p: any) => {
+      // 新格式：数组 [x, y, r, opacity]
+      if (Array.isArray(p)) {
+        return {
+          x: p[0],
+          y: p[1],
+          r: p[2],
+          opacity: p[3]
+        }
+      }
+      // 旧格式：对象 {x, y, r, opacity}
+      return p as HeatPoint
+    })
+  })
+}
+
 Page({
 
   data: {
@@ -266,9 +301,6 @@ Page({
             return
           }
 
-          // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
-//           let canvasContainerStyle = ''
-//           if (this.data.permanentBackgroundAspectRatio) {
           // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
           let canvasContainerStyle = ''
           if (this.data.permanentBackgroundAspectRatio) {
@@ -748,7 +780,8 @@ Page({
         }
 
       // 使用 artwork id 作为文件名的一部分，确保多次保存保持一致
-      const strokesData = JSON.stringify(self.strokes)
+      const compressedData = compressStrokes(self.strokes)
+      const strokesData = JSON.stringify(compressedData)
       const fs = wx.getFileSystemManager()
       const pointsPath = `${wx.env.USER_DATA_PATH}/${id}_points.json`
       fs.writeFileSync(pointsPath, strokesData, 'utf8')
@@ -822,7 +855,8 @@ Page({
           const downloadRes = await wx.cloud.downloadFile({ fileID: data.pointsFileId })
           const fs = wx.getFileSystemManager()
           const jsonStr = fs.readFileSync(downloadRes.tempFilePath, 'utf8')
-          const strokes = JSON.parse(jsonStr as string)
+          const rawData = JSON.parse(jsonStr as string)
+          const strokes = decompressStrokes(rawData)
           
           self.strokes = strokes
           this.redrawAll()

@@ -222,22 +222,6 @@ Component({
       wx.navigateBack({ delta: 1 })
     },
 
-    async onLoadCloudImage() {
-      const self = this as any
-      const fileID = 'cloud://art-9g2yt6t89a45335b.6172-art-9g2yt6t89a45335b-1393918820/backgrounds/bg2.png'
-      
-      try {
-        wx.showLoading({ title: '读取中...' })
-        const downloadRes = await wx.cloud.downloadFile({ fileID })
-        self.setData({ cloudImageUrl: downloadRes.tempFilePath })
-        wx.hideLoading()
-        wx.showToast({ title: '读取成功', icon: 'success' })
-      } catch (err: any) {
-        console.error('读取云存储失败', err)
-        wx.hideLoading()
-        wx.showToast({ title: '读取失败', icon: 'none' })
-      }
-    },
 
     onGoBgSelectEditor() {
       wx.navigateTo({ url: '/pages/bgselect/bgselect?target=editor' })
