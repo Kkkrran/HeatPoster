@@ -1,0 +1,10 @@
+{
+  "name": "cos-helper",
+  "version": "1.0.0",
+  "description": "COS authentications",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~3.0.1",
+    "cos-nodejs-sdk-v5": "^2.12.0"
+  }
+}

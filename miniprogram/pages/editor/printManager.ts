@@ -129,65 +129,75 @@ export class PrintManager {
     return { canPrint: true }
   }
 
-  // 上传图片到云存储并获取网络URL
-  async uploadImageToCloud(localPath: string, openid: string): Promise<string> {
-    console.log('检测到本地路径，上传到云存储获取网络URL...')
-    this.page.toast('正在上传图片...', 'loading')
+  // 上传图片到 COS 存储并获取临时下载 URL
+  async uploadImageToCloud(localPath: string, _openid: string): Promise<string> {
+    console.log('检测到本地路径，准备上传到自定义 COS Bucket...')
+    this.page.toast('正在请求上传授权...', 'loading')
     
     try {
-      const timestamp = Date.now()
-      const cloudPath = `print_temp/${openid}/${timestamp}_print.jpg`
-      
-      // 上传到云存储
-      const uploadRes = await wx.cloud.uploadFile({
-        cloudPath: cloudPath,
-        filePath: localPath
-      })
-      
-      console.log('上传成功，fileID:', uploadRes.fileID)
-      
-      // 获取临时下载URL（https://开头）
-      const tempUrlRes = await wx.cloud.getTempFileURL({
-        fileList: [uploadRes.fileID]
-      })
-      
-      if (tempUrlRes.fileList && tempUrlRes.fileList.length > 0 && tempUrlRes.fileList[0].tempFileURL) {
-        const imageUrl = tempUrlRes.fileList[0].tempFileURL
-        console.log('获取到网络URL:', imageUrl)
-        
-        // 验证网络URL是否可以访问（等待更长时间确保URL完全生效）
-        try {
-          // 等待更长时间，确保云存储URL完全生效
-          await new Promise((resolve) => setTimeout(resolve, 1000)) // 等待1秒
-          
-          // 尝试获取图片信息，验证URL可访问
-          const urlImageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-            wx.getImageInfo({
-              src: imageUrl,
-              success: resolve,
-              fail: reject,
-            })
-          })
-          console.log('网络URL验证成功:', {
-            url: imageUrl,
-            width: urlImageInfo.width,
-            height: urlImageInfo.height
-          })
-          
-          // 再次等待，确保SDK可以访问
-          await new Promise((resolve) => setTimeout(resolve, 500))
-        } catch (urlErr) {
-          console.warn('网络URL验证失败，但继续尝试:', urlErr)
-          // 不阻止打印，继续尝试
+      // 1. 获取上传授权
+      const authRes = await wx.cloud.callFunction({
+        name: 'cosHelper',
+        data: {
+          fileName: 'print.jpg'
         }
-        
-        return imageUrl
-      } else {
-        throw new Error('无法获取临时下载URL')
+      })
+      
+      const authData = authRes.result as any
+      if (!authData || !authData.success) {
+        throw new Error(authData?.error || '获取COS授权失败')
       }
-    } catch (uploadErr) {
-      console.error('上传到云存储失败:', uploadErr)
-      throw uploadErr
+      
+      console.log('获取COS授权成功，准备上传...', authData.key)
+      this.page.toast('正在上传图片...', 'loading')
+
+      // 2. 上传文件 (直传 COS)
+      await new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: authData.uploadUrl,
+          filePath: localPath,
+          name: 'file',
+          formData: authData.formData,
+          success: (res) => {
+            if (res.statusCode === 200 || res.statusCode === 204) {
+              console.log('上传 COS 成功')
+              resolve(res)
+            } else {
+              console.error('上传 COS 失败，状态码:', res.statusCode, res.data)
+              reject(new Error(`上传失败: ${res.statusCode}`))
+            }
+          },
+          fail: (err) => {
+            console.error('上传网络错误:', err)
+            reject(err)
+          }
+        })
+      })
+
+      // 3. 返回下载链接
+      const downloadUrl = authData.downloadUrl
+      console.log('获取到 COS 下载链接:', downloadUrl)
+      
+      // 验证网络URL是否可以访问
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        const urlImageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
+          wx.getImageInfo({
+            src: downloadUrl,
+            success: resolve,
+            fail: reject,
+          })
+        })
+        console.log('网络URL验证成功, 尺寸:', urlImageInfo.width, urlImageInfo.height)
+      } catch (urlErr) {
+        console.warn('网络URL验证失败，但继续尝试:', urlErr)
+      }
+      
+      return downloadUrl
+
+    } catch (uploadErr: any) {
+      console.error('上传到 COS 失败:', uploadErr)
+      throw new Error(`上传失败: ${uploadErr.message || uploadErr}`)
     }
   }
 
