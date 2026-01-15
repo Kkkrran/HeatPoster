@@ -29,6 +29,8 @@ page {
 
 .content {
   padding: 0 10vw 32rpx; /* 使用 padding 来控制两侧留白，更自然适应不同屏幕 */
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .grid {
