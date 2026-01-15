@@ -76,26 +76,6 @@
     </view>
   </view>
 
-  <view class="section">
-    <view class="card">
-      <view class="card-title">相册自动播放设置</view>
-      <view class="card-desc">设置相册自动播放的相关参数</view>
-      <view class="card-actions">
-        <t-button theme="primary" size="small" bindtap="onSaveAutoPlaySettings">保存设置</t-button>
-      </view>
-      <t-cell title="滑动速度" description="调节相册自动滑动的速度">
-        <view slot="note" class="server-slider">
-          <t-slider value="{{scrollSpeed}}" min="{{1}}" max="{{100}}" bind:change="onScrollSpeedChange" />
-        </view>
-      </t-cell>
-      <t-cell title="底部停留时间(秒)" description="滑动到底部后的等待时间">
-        <view slot="note" class="server-slider">
-          <t-slider value="{{scrollWaitTime}}" min="{{0}}" max="{{30}}" bind:change="onScrollWaitTimeChange" />
-        </view>
-      </t-cell>
-    </view>
-  </view>
-
   <view class="bottom">
     <t-button variant="outline" theme="default" block bindtap="onBackHome">返回作品库</t-button>
   </view>
