@@ -10,7 +10,6 @@ Page({
     linePressure: 2.5,
     smoothness: 80, // Higher = smoother but more lag? HTML used 80-100.
     
-    backgroundImage: '',
     permanentBackgroundImage: '',
     permanentBackgroundAspectRatio: undefined as number | undefined,
     canvasContainerStyle: '',
@@ -49,10 +48,10 @@ Page({
   moveFlag: false,
   upof: { x: 0, y: 0 },
   radius: 0,
-  has: [] as any[],
+  l: 10,
   arr: [] as any[],
-  l: 20,
-  
+  has: [] as any[],
+
   // 打印管理器
   printManager: null as any,
 
@@ -74,7 +73,8 @@ Page({
     this.initCanvas()
     
     // 初始化打印相关
-    const systemInfo = wx.getSystemInfoSync()
+    // @ts-ignore
+    const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
     const pixelRatio = systemInfo.pixelRatio || 1
     this.setData({ pixelRatio })
     
@@ -194,7 +194,8 @@ Page({
         }
         
         // 设置canvas容器的样式（使用rpx单位）
-        const systemInfo = wx.getSystemInfoSync()
+        // @ts-ignore
+        const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
         const rpxRatio = systemInfo.windowWidth / 750
         const targetWidthRpx = targetWidth / rpxRatio
         const targetHeightRpx = targetHeight / rpxRatio
@@ -219,7 +220,7 @@ Page({
             const canvas = res[0].node
             const ctx = canvas.getContext('2d')
             // @ts-ignore
-            const dpr = wx.getSystemInfoSync().pixelRatio
+            const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
             
             this.canvas = canvas
             this.ctx = ctx
@@ -254,107 +255,96 @@ Page({
       this.ctx.clearRect(0, 0, this.width, this.height)
   },
 
-  async getComposedImage() {
-      return new Promise((resolve, reject) => {
-          const query = this.createSelectorQuery()
-          query.select('#exportCanvas')
-              .fields({ node: true, size: true })
-              .exec(async (res) => {
-                  try {
-                    if (!res[0] || !res[0].node) {
-                        reject('Export canvas not found')
-                        return
-                    }
-                    
-                    const canvas = res[0].node
-                    const ctx = canvas.getContext('2d')
-                    const dpr = this.dpr || 1 // use same dpr
-                    
-                    // Use this.width/height which are logical pixels set in initCanvasContext
-                    const w = this.width 
-                    const h = this.height 
-                    
-                    canvas.width = w * dpr
-                    canvas.height = h * dpr
-                    ctx.scale(dpr, dpr)
-                    
-                    // 1. White Base
-                    ctx.fillStyle = '#ffffff'
-                    ctx.fillRect(0, 0, w, h)
-                    
-                    // 2. Permanent BG
-                    if (this.data.permanentBackgroundImage) {
-                        const img = canvas.createImage()
-                        await new Promise<void>((r) => { 
-                            img.onload = () => r(); 
-                            img.onerror = () => r(); // ignore error
-                            img.src = this.data.permanentBackgroundImage 
-                        })
-                        ctx.drawImage(img, 0, 0, w, h)
-                    }
-                    
-                     // 3. Temp BG - 拉伸填满画布，从 (0,0) 开始，确保打印位置准确
-                     if (this.data.backgroundImage) {
-                         const img = canvas.createImage()
-                         await new Promise<void>((r) => { 
-                             img.onload = () => r();
-                             img.onerror = () => r();
-                             img.src = this.data.backgroundImage 
-                         })
-                         // 使用 fill 模式：直接拉伸填满画布，从 (0,0) 开始，确保打印位置准确
-                         ctx.drawImage(img, 0, 0, w, h)
-                     }
-                    
-                    // 4. Strokes (Main Canvas)
-                    if (this.canvas) {
-                        ctx.drawImage(this.canvas, 0, 0, w, h)
-                    }
-                    
-                    // 5. Export
-                    setTimeout(() => {
-                        wx.canvasToTempFilePath({
-                            canvas: canvas,
-                            fileType: 'jpg',
-                            quality: 0.9,
-                            success: (r) => resolve(r.tempFilePath),
-                            fail: reject
-                        })
-                    }, 100)
-                  } catch(e) {
-                      reject(e)
-                  }
-              })
+  // 统一的图片生成逻辑（私有方法）
+  async _generateComposedImage(quality: number): Promise<string> {
+    const self = this as any
+    if (!self.canvas) return Promise.reject('Canvas not initialized')
+
+    // 使用 Canvas 的实际物理尺寸
+    const width = self.canvas.width
+    const height = self.canvas.height
+    // 注意：self.canvas.width/height 已经是 dpr 缩放后的像素尺寸
+
+    // 创建离屏 Canvas 用于合成
+    // @ts-ignore
+    const offCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
+    const offCtx = offCanvas.getContext('2d')
+
+    // 1. 填充白底
+    offCtx.fillStyle = '#ffffff'
+    offCtx.fillRect(0, 0, width, height)
+
+    // 2. 绘制常驻背景
+    if (this.data.permanentBackgroundImage) {
+      // @ts-ignore
+      const img = offCanvas.createImage()
+      await new Promise((resolve) => {
+        img.onload = resolve
+        img.onerror = resolve
+        img.src = this.data.permanentBackgroundImage
       })
+      offCtx.drawImage(img, 0, 0, width, height)
+    }
+
+    // 3. 绘制当前笔迹
+    offCtx.drawImage(self.canvas, 0, 0, width, height)
+
+    // 4. 导出 JPG
+    return new Promise((resolve, reject) => {
+      wx.canvasToTempFilePath({
+        canvas: offCanvas,
+        fileType: 'jpg',
+        quality: quality,
+        success: (res) => resolve(res.tempFilePath),
+        fail: reject
+      })
+    })
   },
 
-  // Tools
-  toggleTools() {
-    if (!this.data.toolsVisible) {
-      // 准备打开，先生成快照
-      wx.canvasToTempFilePath({
-        canvas: this.canvas,
-        fileType: 'jpg',
-        quality: 0.8,
-        success: (res) => {
-          this.setData({
-            snapshotUrl: res.tempFilePath,
-            isCanvasHidden: true,
-            toolsVisible: true
-          })
-        },
-        fail: (err) => {
-          console.error('snapshot failed, normal open', err)
-          this.setData({ toolsVisible: true })
-        }
-      })
+  // 生成用于保存或打印的高质量图片
+  async getComposedImage() {
+      return this._generateComposedImage(0.9)
+  },
+
+  // 生成用于防遮挡的快照（略低质量）
+  async getSnapshotImage() {
+      // 避免报错，如果还没初始化
+      const self = this as any
+      if (!self.canvas) return ''
+      try {
+          return await this._generateComposedImage(0.8)
+      } catch (e) {
+          console.error('Snapshot failed', e)
+          return ''
+      }
+  },
+
+
+  
+  async toggleTools() {
+    const willShow = !this.data.toolsVisible
+    if (willShow) {
+      // 打开工具栏前，生成快照并隐藏 Canvas，防止遮挡
+      try {
+        const snapshotUrl = await this.getSnapshotImage()
+        this.setData({
+          snapshotUrl,
+          isCanvasHidden: true,
+          toolsVisible: true
+        })
+      } catch (err) {
+        console.error('Snapshot failed', err)
+        // 失败降级：直接显示，可能遮挡
+        this.setData({ toolsVisible: true })
+      }
     } else {
-      this.setData({ 
-        toolsVisible: false,
-        isCanvasHidden: false
-      })
+      // 关闭工具栏
+      this.setData({ toolsVisible: false })
+      // 注意：T-Popup 的 visible-change 事件会在动画结束或遮罩点击时触发
+      // 那里会负责恢复 isCanvasHidden: false
     }
   },
-  
+
   onToolsVisibleChange(e: any) {
     const visible = e.detail.visible
     if (!visible) {
@@ -474,32 +464,6 @@ Page({
       this.toggleTools()
   },
   
-  onImportBackground() {
-      wx.chooseImage({
-          count: 1,
-          sizeType: ['compressed'],
-          success: (res) => {
-              const path = res.tempFilePaths[0]
-              
-              const draw = (p: string) => {
-                   this.setData({ backgroundImage: p, toolsVisible: false, isCanvasHidden: false })
-              }
-              
-              // Use crop if available? Editor uses wx.editImage.
-              // @ts-ignore
-              if (wx.editImage) {
-                 // @ts-ignore
-                 wx.editImage({
-                     src: path,
-                     success: (r: any) => draw(r.tempFilePath)
-                 })
-              } else {
-                  draw(path)
-              }
-          }
-      })
-  },
-
   async saveToAlbum(filePath: string) {
     if (!filePath) return
 
@@ -536,28 +500,22 @@ Page({
     })
   },
   
-  onSave() {
+  async onSave() {
      this.toast('保存中...', 'loading')
      this.setData({ toolsVisible: false })
 
      // 保存前先生成快照并隐藏 Canvas，防止遮挡即将显示的二维码
      if (this.canvas) {
-        wx.canvasToTempFilePath({
-            canvas: this.canvas,
-            fileType: 'jpg',
-            quality: 0.8,
-            success: (res) => {
-                this.setData({
-                    snapshotUrl: res.tempFilePath,
-                    isCanvasHidden: true
-                })
-                this.executeSave()
-            },
-            fail: (err) => {
-                console.error('Snapshot failed', err)
-                this.executeSave()
-            }
-        })
+        try {
+            const snapshotUrl = await this.getSnapshotImage()
+            this.setData({
+                snapshotUrl,
+                isCanvasHidden: true
+            })
+        } catch (err) {
+            console.error('Snapshot failed', err)
+        }
+        this.executeSave()
      } else {
          this.executeSave()
      }

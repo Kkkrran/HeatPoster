@@ -32,18 +32,10 @@
         mode="scaleToFill"
       ></image>
       
-      <!-- 临时背景图（中间层） -->
-      <image 
-        wx:if="{{backgroundImage}}" 
-        src="{{backgroundImage}}" 
-        class="canvas-bg temp-bg" 
-        mode="scaleToFill"
-      ></image>
-
       <canvas 
         type="2d" 
         id="brushCanvas" 
-        class="canvas {{isCanvasHidden ? 'hidden' : ''}} {{(backgroundImage || permanentBackgroundImage) ? 'transparent' : ''}}"
+        class="canvas {{isCanvasHidden ? 'hidden' : ''}} {{permanentBackgroundImage ? 'transparent' : ''}}"
         bindtouchstart="onTouchStart"
         bindtouchmove="onTouchMove"
         bindtouchend="onTouchEnd"
@@ -68,10 +60,6 @@
           <view class="sheet-title">工具与设置</view>
         </view>
         <t-button theme="danger" variant="base" size="small" bindtap="onClear">清空画布</t-button>
-      </view>
-
-      <view class="tool-row" style="padding: 0 32rpx; margin-top: 20rpx;">
-        <t-button theme="primary" variant="outline" block bindtap="onImportBackground">导入临时背景</t-button>
       </view>
 
       <view class="slider-row">

@@ -32,7 +32,9 @@ Component({
   
   lifetimes: {
     attached() {
-      const { statusBarHeight } = wx.getSystemInfoSync()
+      // @ts-ignore
+      const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+      const { statusBarHeight } = systemInfo
       this.setData({
         paddingTop: statusBarHeight + 12
       })

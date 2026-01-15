@@ -34,6 +34,7 @@ export class PrintManager {
 
   constructor(page: any) {
     this.page = page
+    this.checkPrinterConnection()
   }
 
   // 检查打印机连接状态
@@ -587,7 +588,8 @@ export class PrintManager {
 
     try {
       // 记录设备信息，用于调试不同设备上的问题
-      const systemInfo = wx.getSystemInfoSync()
+      // @ts-ignore
+      const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
       const pageSelf = this.page as any
       
       // 计算打印纸张的宽高比（70mm × 100mm = 0.7）
@@ -686,7 +688,8 @@ export class PrintManager {
         const timeoutId = setTimeout(() => {
           if (!hasReceivedSuccess) {
             console.warn('打印超时：30秒内未收到成功回调')
-            const systemInfo = wx.getSystemInfoSync()
+            // @ts-ignore
+            const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
             console.warn('设备信息:', {
               设备型号: systemInfo.model,
               屏幕宽度: systemInfo.windowWidth,
@@ -721,7 +724,8 @@ export class PrintManager {
             hasReceivedSuccess = true
             clearTimeout(timeoutId)
             
-            const systemInfo = wx.getSystemInfoSync()
+            // @ts-ignore
+            const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
             console.log('打印成功完成', {
               ResultCode: res.ResultCode,
               ResultValue: res.ResultValue,
@@ -748,9 +752,12 @@ export class PrintManager {
             ResultValue: res.ResultValue,
             期望成功码: constants.globalResultCode.ResultCodeSuccess,
             设备信息: {
-              设备型号: wx.getSystemInfoSync().model,
-              屏幕宽度: wx.getSystemInfoSync().windowWidth,
-              屏幕高度: wx.getSystemInfoSync().windowHeight
+              // @ts-ignore
+              设备型号: (wx.getDeviceInfo ? wx.getDeviceInfo().model : wx.getSystemInfoSync().model),
+              // @ts-ignore
+              屏幕宽度: (wx.getWindowInfo ? wx.getWindowInfo().windowWidth : wx.getSystemInfoSync().windowWidth),
+              // @ts-ignore
+              屏幕高度: (wx.getWindowInfo ? wx.getWindowInfo().windowHeight : wx.getSystemInfoSync().windowHeight)
             }
           })
           this.page.toast(`打印失败: ${errorMsg}`, 'error')

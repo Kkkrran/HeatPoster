@@ -39,7 +39,6 @@ Page({
     snapshotUrl: '',
     qrCodeUrl: '', // 下载链接的二维码图片路径
     isCanvasHidden: false,
-    backgroundImage: '', // 临时背景图
     permanentBackgroundImage: '', // 常驻背景图
     permanentBackgroundAspectRatio: undefined as number | undefined, // 常驻背景的宽高比
     canvasContainerStyle: '', // canvas容器的动态样式
@@ -268,6 +267,9 @@ Page({
           }
 
           // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
+//           let canvasContainerStyle = ''
+//           if (this.data.permanentBackgroundAspectRatio) {
+          // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
           let canvasContainerStyle = ''
           if (this.data.permanentBackgroundAspectRatio) {
             const aspectRatio = this.data.permanentBackgroundAspectRatio
@@ -285,7 +287,8 @@ Page({
             }
             
             // 设置canvas容器的样式（使用rpx单位）
-            const systemInfo = wx.getSystemInfoSync()
+            // @ts-ignore
+            const systemInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
             const rpxRatio = systemInfo.windowWidth / 750
             const targetWidthRpx = targetWidth / rpxRatio
             const targetHeightRpx = targetHeight / rpxRatio
@@ -528,26 +531,69 @@ Page({
       self.needsRender = true
     },
 
-    openTools() {
+
+    // 通用背景绘制逻辑：白底 + 常驻背景
+    async drawComposeBackground(ctx: any, canvas: any, width: number, height: number) {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, height)
+
+      if (this.data.permanentBackgroundImage) {
+        const img = canvas.createImage()
+        await new Promise((resolve) => {
+          img.onload = resolve
+          img.onerror = resolve
+          img.src = this.data.permanentBackgroundImage
+        })
+        ctx.drawImage(img, 0, 0, width, height)
+      }
+    },
+
+    // 生成用于防遮挡的快照（包含背景和笔迹，JPG格式）
+    async getSnapshotImage(): Promise<string> {
       const self = this as any
-      // 生成快照以解决原生 Canvas 遮挡 Popup 的问题
-      wx.canvasToTempFilePath({
-        canvas: self.canvas,
-        fileType: 'jpg',
-        quality: 0.8,
-        success: (res) => {
-          this.setData({
-            snapshotUrl: res.tempFilePath,
-            isCanvasHidden: true,
-            toolsVisible: true
-          })
-        },
-        fail: (err) => {
-          console.error('snapshot failed', err)
-          // 降级处理：直接打开，虽然可能会遮挡
-          this.setData({ toolsVisible: true })
-        }
+      if (!self.canvas) return ''
+
+      // 使用 Canvas 的实际物理尺寸
+      const width = self.canvas.width
+      const height = self.canvas.height
+
+      // 创建离屏 Canvas 用于合成
+      // @ts-ignore
+      const offCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
+      const offCtx = offCanvas.getContext('2d')
+
+      // 绘制统用背景
+      await this.drawComposeBackground(offCtx, offCanvas, width, height)
+
+      // 绘制当前笔迹
+      offCtx.drawImage(self.canvas, 0, 0, width, height)
+
+      // 导出 JPG
+      return new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({
+          canvas: offCanvas,
+          fileType: 'jpg',
+          quality: 0.8,
+          success: (res) => resolve(res.tempFilePath),
+          fail: reject
+        })
       })
+    },
+
+    async openTools() {
+      try {
+        // 使用合成快照（包含背景，JPG）
+        const snapshotUrl = await this.getSnapshotImage()
+        this.setData({
+          snapshotUrl,
+          isCanvasHidden: true,
+          toolsVisible: true
+        })
+      } catch (err) {
+        console.error('snapshot failed', err)
+        // 降级：直接打开，可能会遮挡
+        this.setData({ toolsVisible: true })
+      }
     },
 
     closeTools() {
@@ -567,36 +613,11 @@ Page({
     },
 
     onBrushRadiusChange(e: any) {
-      console.log('onBrushRadiusChange', e)
-    const { value } = e.detail || {}
-    if (value !== undefined) {
-      const min = this.data.brushRadiusMin || BRUSH_RADIUS_RANGE.min
-      const max = this.data.brushRadiusMax || BRUSH_RADIUS_RANGE.max
-      const numericValue = Number(value)
-      if (Number.isNaN(numericValue)) return
-      const radius = clampValue(numericValue, min, max)
-      this.setData({ brushRadius: radius })
-    }
+      this.setData({ brushRadius: e.detail.value })
     },
-
+  
     onHeatRateChange(e: any) {
-      console.log('onHeatRateChange', e)
-    const { value } = e.detail || {}
-    if (value !== undefined) {
-      const min = this.data.heatRateMin || BRUSH_CONFIG.normal.heatMin
-      const max = this.data.heatRateMax || BRUSH_CONFIG.normal.heatMax
-      const numericValue = parseFloat(value)
-      if (Number.isNaN(numericValue)) return
-      const heatRate = clampValue(numericValue, min, max)
-      this.setData({ heatRate: Number(heatRate.toFixed(2)) })
-    }
-  },
-
-  onBackgroundChange(e: any) {
-    const { url } = e.detail || {}
-    if (url) {
-      this.setData({ backgroundImage: url })
-    }
+      this.setData({ heatRate: e.detail.value })
     },
 
     onUndo() {
@@ -657,7 +678,7 @@ Page({
       this.toast('画布已清空')
     },
 
-  onSave() {
+  async onSave() {
     this.setData({ toolsVisible: false })
     
     // 为了防止 Canvas（原生组件层级高）挡住二维码
@@ -669,25 +690,18 @@ Page({
     // 但因为从点击保存到保存成功有一段时间，我们現在就切换也无妨，体验更流畅（界面静止）
     
     const self = this as any
+    // 先生成合成快照（含背景），防止遮挡二维码
     if (self.canvas) {
-        wx.canvasToTempFilePath({
-            canvas: self.canvas,
-            fileType: 'jpg',
-            quality: 0.8,
-            success: (res) => {
-                this.setData({
-                    snapshotUrl: res.tempFilePath,
-                    isCanvasHidden: true // 隐藏 Canvas，显示快照
-                })
-                // 继续执行实际的保存逻辑
-                this.saveArtwork()
-            },
-            fail: (err) => {
-                console.error('Snapshot failed', err)
-                // 即使截图失败，也直接保存，不影响核心流程
-                this.saveArtwork()
-            }
-        })
+        try {
+            const snapshotUrl = await this.getSnapshotImage()
+            this.setData({
+                snapshotUrl,
+                isCanvasHidden: true // 隐藏 Canvas，显示快照
+            })
+        } catch (err) {
+            console.error('Snapshot failed', err)
+        }
+        this.saveArtwork()
     } else {
          this.saveArtwork()
     }
@@ -821,43 +835,6 @@ Page({
       }
     },
 
-    onImportBackground() {
-      const self = this as any
-      wx.chooseImage({
-        count: 1,
-        sizeType: ['original', 'compressed'],
-        sourceType: ['album', 'camera'],
-        success(res) {
-          const tempFilePaths = res.tempFilePaths
-          if (tempFilePaths.length > 0) {
-            const src = tempFilePaths[0]
-            
-          // @ts-ignore
-          if (wx.editImage) {
-            // @ts-ignore
-            wx.editImage({
-              src: src,
-              success: (editRes: any) => {
-                      self.setData({
-                  backgroundImage: editRes.tempFilePath,
-                        // 关闭工具面板，以便查看背景
-                        toolsVisible: false,
-                        isCanvasHidden: false
-                      })
-              },
-              fail: (err: any) => {
-                console.log('editImage cancelled or failed', err)
-                // 用户取消编辑时，也可以选择不做任何事
-              }
-            })
-          } else {
-            self.toast('当前微信版本不支持图片编辑', 'error')
-          }
-        }
-      }
-    })
-  },
-
     /**
    * 将本地合成图保存到相册（处理授权）
    */
@@ -929,34 +906,8 @@ Page({
     const offscreenCanvas = wx.createOffscreenCanvas({ type: '2d', width: standardWidth, height: standardHeight })
     const offscreenCtx = offscreenCanvas.getContext('2d')
 
-    // 预先填充白色背景，确保转换jpg时无透明底问题
-    offscreenCtx.fillStyle = '#ffffff'
-    offscreenCtx.fillRect(0, 0, standardWidth, standardHeight)
-
-    // 2. 先绘制常驻背景（最底层）
-    if (this.data.permanentBackgroundImage) {
-      // @ts-ignore - 离屏 Canvas 的 createImage 方法
-      const permanentBgImg = offscreenCanvas.createImage()
-      permanentBgImg.src = this.data.permanentBackgroundImage
-      await new Promise((resolve) => {
-        permanentBgImg.onload = resolve
-        permanentBgImg.onerror = resolve // 容错处理
-      })
-      offscreenCtx.drawImage(permanentBgImg, 0, 0, standardWidth, standardHeight)
-    } 
-    // else { // 已在上方统一填充白色，此处无需处理 }
-
-    // 3. 再绘制临时背景（中间层，如果有的话）
-    if (this.data.backgroundImage) {
-      // @ts-ignore - 离屏 Canvas 的 createImage 方法
-      const bgImg = offscreenCanvas.createImage()
-      bgImg.src = this.data.backgroundImage
-      await new Promise((resolve) => {
-        bgImg.onload = resolve
-        bgImg.onerror = resolve // 容错处理
-      })
-      offscreenCtx.drawImage(bgImg, 0, 0, standardWidth, standardHeight)
-    }
+    // 2. 绘制通用背景（白底 + 常驻背景）
+    await this.drawComposeBackground(offscreenCtx, offscreenCanvas, standardWidth, standardHeight)
 
     // 4. 获取当前热力图的 ImageData 并处理颜色映射
     // 注意：需要从原始画布尺寸获取 ImageData，然后缩放到标准尺寸
@@ -1139,7 +1090,8 @@ Page({
                 }
                 const canvas = res[0].node
                 const ctx = canvas.getContext('2d')
-                const dpr = wx.getSystemInfoSync().pixelRatio || 1
+                // @ts-ignore
+                const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio || 1
                 
                 const width = res[0].width
                 const height = res[0].height
