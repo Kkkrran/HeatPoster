@@ -26,7 +26,7 @@ exports.main = async (event, context) => {
         console.log('list action, OPENID:', OPENID)
         const res = await db
           .collection(COLLECTION)
-          .where({ _openid: OPENID, isDeleted: _.neq(true) })
+          .where({ _openid: OPENID })
           .orderBy('updatedAt', 'desc')
           .limit(limit)
           .get()
@@ -104,12 +104,11 @@ exports.main = async (event, context) => {
         const doc = res.data
         if (!doc || doc._openid !== OPENID) return { ok: false, error: 'not found' }
 
-        await db.collection(COLLECTION).doc(id).update({
-          data: { isDeleted: true, updatedAt: Date.now() },
-        })
+        // 硬删除：直接移除记录
+        await db.collection(COLLECTION).doc(id).remove()
 
-        // 可选：删除云存储文件（失败不影响主流程）
-        const fileList = [doc.thumbnailFileId, doc.exportFileId].filter(Boolean)
+        // 删除云存储文件
+        const fileList = [doc.thumbnailFileId, doc.exportFileId, doc.pointsFileId].filter(v => v && typeof v === 'string')
         if (fileList.length) {
           try {
             await cloud.deleteFile({ fileList })

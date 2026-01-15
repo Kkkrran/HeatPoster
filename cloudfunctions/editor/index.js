@@ -40,8 +40,6 @@ exports.main = async (event, context) => {
             pointsFileId: '',
             thumbnailFileId: '',
             exportFileId: '',
-            // flags
-            isDeleted: false,
           },
         })
         return { ok: true, data: { id: res._id } }
@@ -52,7 +50,7 @@ exports.main = async (event, context) => {
         if (!id) return { ok: false, error: 'missing id' }
         const res = await db.collection(COLLECTION).doc(id).get()
         const doc = res.data
-        if (!doc || doc._openid !== OPENID || doc.isDeleted === true) return { ok: false, error: 'not found' }
+        if (!doc || doc._openid !== OPENID) return { ok: false, error: 'not found' }
         return { ok: true, data: doc }
       }
 
@@ -69,7 +67,7 @@ exports.main = async (event, context) => {
 
         const res = await db.collection(COLLECTION).doc(id).get()
         const doc = res.data
-        if (!doc || doc._openid !== OPENID || doc.isDeleted === true) return { ok: false, error: 'not found' }
+        if (!doc || doc._openid !== OPENID) return { ok: false, error: 'not found' }
 
         const patch = { updatedAt: Date.now() }
         if (pointsFileId) patch.pointsFileId = pointsFileId

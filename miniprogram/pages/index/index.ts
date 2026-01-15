@@ -19,7 +19,6 @@ type ArtworkDoc = {
   updatedAt: number
   thumbnailFileId?: string
   exportFileId?: string
-  isDeleted?: boolean
 }
 
 const ENV_ID = 'art-9g2yt6t89a45335b'
