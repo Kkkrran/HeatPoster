@@ -15,7 +15,7 @@
     scroll-top="{{scrollTop}}"
     bindtouchstart="onScrollTouch"
   >
-    <view class="grid" wx:if="{{artworks.length > 0}}">
+    <view class="grid" wx:if="{{artworks.length > 0}}" style="opacity: {{contentOpacity}}; transition: opacity 0.5s ease;">
       <view class="grid-item" wx:for="{{artworks}}" wx:key="id">
         <view class="image-wrapper">
           <image class="artwork-image" src="{{item.tempFilePath}}" mode="aspectFill" lazy-load></image>

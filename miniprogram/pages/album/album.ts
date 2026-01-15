@@ -23,6 +23,7 @@ Component({
     loading: false,
     height: 0,
     scrollTop: 0,
+    contentOpacity: 1,
   },
 
   lifetimes: {
@@ -37,10 +38,7 @@ Component({
       this.loadArtworks()
     },
     detached() {
-      if ((this as any)._scrollTimer) {
-        clearInterval((this as any)._scrollTimer);
-        (this as any)._scrollTimer = null
-      }
+      this.clearAllTimers()
     },
   },
 
@@ -98,7 +96,11 @@ Component({
       if (!forceRefresh) {
         const cachedArtworks = this.loadFromCache()
         if (cachedArtworks && cachedArtworks.length > 0) {
-          this.setData({ artworks: cachedArtworks, loading: false }, () => {
+          this.setData({ 
+            artworks: cachedArtworks, 
+            loading: false,
+            contentOpacity: 1
+          }, () => {
             this.startAutoScroll()
           })
           // 后台刷新数据
@@ -193,8 +195,12 @@ Component({
         // 保存到缓存
         this.saveToCache(artworks)
 
-        this.setData({ artworks, loading: false }, () => {
-          this.startAutoScroll()
+        this.setData({ 
+          artworks, 
+          loading: false,
+          contentOpacity: 1
+        }, () => {
+          this.startAutoScroll(forceRefresh) // 如果是强制刷新，说明是重新开始
         })
       } catch (err: any) {
         console.error('加载作品失败', err)
@@ -234,12 +240,17 @@ Component({
       }
     },
 
-    startAutoScroll() {
-      // @ts-ignore
-      if (this._scrollTimer) clearInterval(this._scrollTimer)
+    onScrollTouch() {
+      console.log('用户触摸，停止自动滚动')
+      this.clearAllTimers()
+    },
+
+    startAutoScroll(restart = false) {
+      this.clearAllTimers()
 
       // 延迟确保渲染完成
-      setTimeout(() => {
+      // @ts-ignore
+      this._startScrollTimeout = setTimeout(() => {
         this.createSelectorQuery()
           .select('.content')
           .boundingClientRect()
@@ -256,15 +267,22 @@ Component({
 
             console.log('开始自动滚动，最大滚动距离:', maxScroll)
             
-            let currentTop = 0
-            // 确保归零
-            this.setData({ scrollTop: 0 })
+            let currentTop = this.data.scrollTop || 0
+
+            // 如果是重新开始（比如刷新后），强制归零
+            if (restart) {
+              currentTop = 0
+              this.setData({ scrollTop: 0 })
+            }
 
             // @ts-ignore
             this._scrollTimer = setInterval(() => {
               if (currentTop >= maxScroll) {
                 // @ts-ignore
                 clearInterval(this._scrollTimer)
+                // @ts-ignore
+                this._scrollTimer = null
+                this.handleScrollFinish()
                 return
               }
               // 增加步长，降低频率，减少抖动
@@ -275,6 +293,60 @@ Component({
             }, 100)
           })
       }, 1000)
+    },
+
+    handleScrollFinish() {
+      console.log('滚动到底部，等待刷新...')
+
+      // @ts-ignore
+      this._finishTimer1 = setTimeout(() => {
+        // 淡出
+        this.setData({ contentOpacity: 0 })
+
+        // 等待动画结束 (500ms)
+        // @ts-ignore
+        this._finishTimer2 = setTimeout(() => {
+          // 跳回顶部
+          this.setData({ scrollTop: 0 })
+          
+          // 刷新数据，加载完毕后会自动 fade in 并 startAutoScroll(restart=true)
+          this.loadArtworks(true)
+        }, 500)
+      }, 2000)
+    },
+
+    clearAllTimers() {
+      // @ts-ignore
+      if (this._scrollTimer) {
+        // @ts-ignore
+        clearInterval(this._scrollTimer)
+        // @ts-ignore
+        this._scrollTimer = null
+      }
+      
+      // @ts-ignore
+      if (this._startScrollTimeout) {
+        // @ts-ignore
+        clearTimeout(this._startScrollTimeout)
+        // @ts-ignore
+        this._startScrollTimeout = null
+      }
+
+      // @ts-ignore
+      if (this._finishTimer1) {
+        // @ts-ignore
+        clearTimeout(this._finishTimer1)
+        // @ts-ignore
+        this._finishTimer1 = null
+      }
+
+      // @ts-ignore
+      if (this._finishTimer2) {
+        // @ts-ignore
+        clearTimeout(this._finishTimer2)
+        // @ts-ignore
+        this._finishTimer2 = null
+      }
     },
   },
 })
