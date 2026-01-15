@@ -42,6 +42,19 @@ Component({
     },
   },
 
+  pageLifetimes: {
+    show() {
+      // 页面显示时尝试恢复滚动
+      if (this.data.artworks.length > 0 && !this.data.loading) {
+        this.resumeAutoScroll()
+      }
+    },
+    hide() {
+      // 页面隐藏时清理定时器节省资源
+      this.clearAllTimers()
+    }
+  },
+
   methods: {
     goBack() {
       wx.navigateBack()
@@ -297,8 +310,15 @@ Component({
               this.setData({ scrollTop: 0 })
             }
 
+            let lastTime = Date.now()
+            const speed = 100 // 滚动速度：30px/s。越小越慢。
+
             // @ts-ignore
             this._scrollTimer = setInterval(() => {
+              const now = Date.now()
+              const dt = (now - lastTime) / 1000 // 转换为秒
+              lastTime = now
+
               if (currentTop >= maxScroll) {
                 // @ts-ignore
                 clearInterval(this._scrollTimer)
@@ -307,12 +327,16 @@ Component({
                 this.handleScrollFinish()
                 return
               }
-              // 增加步长，降低频率，减少抖动
-              currentTop += 2
+              
+              // 使用基于时间的步长计算，保证不同帧率下的速度一致性
+              // 提高刷新频率到 ~30fps (33ms)，消除卡顿感
+              const step = speed * dt
+              currentTop += step
+
               this.setData({
                 scrollTop: currentTop
               })
-            }, 100)
+            }, 33)
           })
       }, 1000)
     },
