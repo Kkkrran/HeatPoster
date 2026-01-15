@@ -193,7 +193,7 @@ Component({
       const self = this as any
       wx.showModal({
         title: '确认删除？',
-        content: '删除后将从作品库移除（可在后台恢复数据）。',
+        content: '删除后将从作品库移除。',
         confirmText: '删除',
         confirmColor: '#e34d59',
         success: async r => {

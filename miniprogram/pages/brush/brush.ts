@@ -33,6 +33,9 @@ Page({
     printNum: 0,
     // 打印参数（默认值从 printManager 导入）
     ...DEFAULT_PRINT_SETTINGS,
+    
+    canUndo: false,
+    canRedo: false,
   },
 
 
@@ -44,6 +47,10 @@ Page({
   brushImg: null as any,
   isBrushLoaded: false,
   
+  history: [] as any[],
+  historyIndex: -1,
+  maxUndoSteps: 10,
+
   // Handwriting state
   moveFlag: false,
   upof: { x: 0, y: 0 },
@@ -66,6 +73,9 @@ Page({
     Object.assign(this, {
       printManager: new PrintManager(this)
     })
+
+    const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
+    this.maxUndoSteps = maxUndoSteps
 
     await this.getOpenId()
     await this.loadPermanentBackground()
@@ -236,9 +246,64 @@ Page({
             // Initial Drawing (Background)
             this.drawBackground()
             
+            // Ensure first history state is saved
+            this.saveHistory()
+
             // Load Brush
             this.loadBrushImage()
         })
+  },
+
+  saveHistory() {
+      if (!this.ctx || !this.canvas) return
+      
+      try {
+        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)
+        
+        // 如果当前不在最新，清除后面的 redo 历史
+        if (this.historyIndex < this.history.length - 1) {
+            this.history = this.history.slice(0, this.historyIndex + 1)
+        }
+        
+        // 压入新状态
+        this.history.push(imageData)
+        
+        // 限制长度
+        if (this.history.length > this.maxUndoSteps + 1) {
+            this.history.shift()
+        } else {
+            this.historyIndex++
+        }
+        
+        this.updateUndoRedoState()
+      } catch (e) {
+          console.error("Save history failed:", e)
+      }
+  },
+
+  onUndo() {
+      if (this.historyIndex > 0) {
+          this.historyIndex--
+          const imageData = this.history[this.historyIndex]
+          this.ctx.putImageData(imageData, 0, 0)
+          this.updateUndoRedoState()
+      }
+  },
+
+  onRedo() {
+      if (this.historyIndex < this.history.length - 1) {
+          this.historyIndex++
+          const imageData = this.history[this.historyIndex]
+          this.ctx.putImageData(imageData, 0, 0)
+          this.updateUndoRedoState()
+      }
+  },
+  
+  updateUndoRedoState() {
+      this.setData({
+          canUndo: this.historyIndex > 0,
+          canRedo: this.historyIndex < this.history.length - 1
+      })
   },
 
   loadBrushImage() {
@@ -454,8 +519,11 @@ Page({
               }
           }
       }
-      this.l = this.data.lineMax
-      this.arr = []
+      
+      this.has = []
+      this.radius = 0
+      
+      this.saveHistory()
   },
   
   distance(a: any, b: any) {
@@ -464,6 +532,7 @@ Page({
   
   onClear() {
       this.drawBackground()
+      this.saveHistory()
       this.toast('已清空')
       this.toggleTools()
   },

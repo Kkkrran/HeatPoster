@@ -326,3 +326,8 @@ page {
   color: #5f6b7a;
   margin-top: 8rpx;
 }
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
