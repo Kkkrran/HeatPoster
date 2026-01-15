@@ -311,7 +311,8 @@ Component({
             }
 
             let lastTime = Date.now()
-            const speed = 100 // 滚动速度：30px/s。越小越慢。
+            // 读取用户设置的速度，默认为100
+            const speed = wx.getStorageSync('album_scroll_speed') || 100 
 
             // @ts-ignore
             this._scrollTimer = setInterval(() => {

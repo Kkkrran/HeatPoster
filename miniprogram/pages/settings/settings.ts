@@ -15,16 +15,20 @@ interface BluetoothDevice {
 const STORAGE_KEYS = {
   EXIT_CONFIRM: 'editor_exit_confirm',
   MAX_UNDO: 'editor_max_undo_steps',
-  PURE_BLACK_BRUSH: 'editor_pure_black_brush'
+  PURE_BLACK_BRUSH: 'editor_pure_black_brush',
+  ALBUM_SCROLL_SPEED: 'album_scroll_speed'
 }
 
 Component({
   data: {
     exitConfirm: false,
     maxUndoSteps: 10,
+    albumScrollSpeed: 100,
     pureBlackBrush: false,
     limitDialogVisible: false,
     tempLimitValue: '',
+    speedDialogVisible: false,
+    tempSpeedValue: '',
     blueList: [],
     connectedDevice: null,
     isScanning: false,
@@ -42,6 +46,7 @@ Component({
       if (exitConfirm === '') exitConfirm = false // 默认为关闭
       
       const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 10
+      const albumScrollSpeed = wx.getStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED) || 100
       
       const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
       
@@ -56,6 +61,7 @@ Component({
       self.setData({ 
         exitConfirm, 
         maxUndoSteps,
+        albumScrollSpeed,
         pureBlackBrush
       })
     }
@@ -134,10 +140,44 @@ Component({
       wx.showToast({ title: val ? '已开启纯黑画笔' : '已恢复热力色', icon: 'success' })
     },
 
+    // --- 滚动速度设置相关 ---
+    onEditScrollSpeed() {
+      const self = this as any
+      self.setData({
+        speedDialogVisible: true,
+        tempSpeedValue: self.data.albumScrollSpeed.toString()
+      })
+    },
+
+    onSpeedInputChange(e: any) {
+      this.setData({ tempSpeedValue: e.detail.value })
+    },
+
+    onSpeedCancel() {
+      this.setData({ speedDialogVisible: false })
+    },
+
+    onSpeedConfirm() {
+      const self = this as any
+      const val = parseInt(self.data.tempSpeedValue, 10)
+      if (isNaN(val) || val < 10 || val > 999) {
+        wx.showToast({ title: '请输入10-999间的数字', icon: 'none' })
+        return
+      }
+      self.setData({
+        albumScrollSpeed: val,
+        speedDialogVisible: false
+      })
+      wx.setStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED, val)
+      wx.showToast({ title: '设置已保存', icon: 'none' })
+    },
+    // --- 结束 ---
+
     onEditUndoLimit() {
-      ;(this as any).setData({
+      const self = this as any
+      self.setData({
         limitDialogVisible: true,
-        tempLimitValue: String((this as any).data.maxUndoSteps)
+        tempLimitValue: self.data.maxUndoSteps.toString()
       })
     },
 
