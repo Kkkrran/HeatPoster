@@ -245,6 +245,28 @@ Component({
       this.clearAllTimers()
     },
 
+    onScrollTouchEnd() {
+      console.log('用户触摸结束，3秒后恢复自动滚动')
+      // @ts-ignore
+      this._resumeTimer = setTimeout(() => {
+        this.resumeAutoScroll()
+      }, 3000)
+    },
+
+    resumeAutoScroll() {
+       this.createSelectorQuery()
+        .select('.content')
+        .scrollOffset((res) => {
+          if (res) {
+            console.log('恢复自动滚动，当前位置:', res.scrollTop)
+            this.setData({ scrollTop: res.scrollTop }, () => {
+              this.startAutoScroll(false)
+            })
+          }
+        })
+        .exec()
+    },
+
     startAutoScroll(restart = false) {
       this.clearAllTimers()
 
@@ -330,6 +352,14 @@ Component({
         clearTimeout(this._startScrollTimeout)
         // @ts-ignore
         this._startScrollTimeout = null
+      }
+
+      // @ts-ignore
+      if (this._resumeTimer) {
+        // @ts-ignore
+        clearTimeout(this._resumeTimer)
+        // @ts-ignore
+        this._resumeTimer = null
       }
 
       // @ts-ignore

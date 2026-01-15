@@ -14,6 +14,7 @@
     style="height:{{height-50}}px;" 
     scroll-top="{{scrollTop}}"
     bindtouchstart="onScrollTouch"
+    bindtouchend="onScrollTouchEnd"
   >
     <view class="grid" wx:if="{{artworks.length > 0}}" style="opacity: {{contentOpacity}}; transition: opacity 0.5s ease;">
       <view class="grid-item" wx:for="{{artworks}}" wx:key="id">
