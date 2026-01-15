@@ -257,6 +257,7 @@ Component({
             console.log('开始自动滚动，最大滚动距离:', maxScroll)
             
             let currentTop = 0
+            // 确保归零
             this.setData({ scrollTop: 0 })
 
             // @ts-ignore
@@ -266,11 +267,12 @@ Component({
                 clearInterval(this._scrollTimer)
                 return
               }
-              currentTop += 1
+              // 增加步长，降低频率，减少抖动
+              currentTop += 2
               this.setData({
                 scrollTop: currentTop
               })
-            }, 50)
+            }, 100)
           })
       }, 1000)
     },
