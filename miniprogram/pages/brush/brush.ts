@@ -339,9 +339,12 @@ Page({
       }
     } else {
       // 关闭工具栏
-      this.setData({ toolsVisible: false })
-      // 注意：T-Popup 的 visible-change 事件会在动画结束或遮罩点击时触发
-      // 那里会负责恢复 isCanvasHidden: false
+      // 主动关闭时，手动恢复 Canvas 状态，确保触摸事件恢复
+      this.setData({ 
+        toolsVisible: false,
+        isCanvasHidden: false,
+        snapshotUrl: '' // 清除快照
+      })
     }
   },
 
@@ -351,7 +354,8 @@ Page({
       // 关闭弹窗时恢复 Canvas
       this.setData({ 
         toolsVisible: false,
-        isCanvasHidden: false
+        isCanvasHidden: false,
+        snapshotUrl: '' // 清除快照
       })
     } else {
         // 如果是通过其他方式（如拖拽？）触发打开，可能也需要快照
