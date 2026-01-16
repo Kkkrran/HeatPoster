@@ -64,7 +64,6 @@ Component({
     moreItems: [
       { label: '重命名', value: 'rename' },
       { label: '删除', value: 'delete', theme: 'danger' },
-      { label: '导出到相册', value: 'export' },
     ],
   },
 
@@ -143,9 +142,6 @@ Component({
         case 'delete':
           self.deleteArtwork(id)
           break
-        case 'export':
-          self.exportArtworkToAlbum(id)
-          break
         default:
           // 如果获取不到 value，尝试直接打印提示，便于调试
           if (!value) {
@@ -216,48 +212,6 @@ Component({
       })
     },
 
-    async exportArtworkToAlbum(id: string) {
-      const self = this as any
-      const item = self.data.artworks.find((a: Artwork) => a.id === id)
-      // 优先使用thumbnailFileId（即thumbnail字段），因为它是包含常驻背景的完整图片
-      const fileID = item?.thumbnail || item?.exportFileId
-      if (!fileID) {
-        wx.showToast({ title: '暂无可导出的图片', icon: 'none' })
-        return
-      }
-
-      try {
-        wx.showLoading({ title: '导出中…' })
-        const r = await wx.cloud.downloadFile({ fileID })
-        const tempFilePath = r.tempFilePath
-        await new Promise<void>((resolve, reject) => {
-          wx.saveImageToPhotosAlbum({
-            filePath: tempFilePath,
-            success: () => resolve(),
-            fail: err => reject(err),
-          })
-        })
-        wx.showToast({ title: '已保存到相册', icon: 'success' })
-      } catch (err: any) {
-        console.error('export failed', err)
-        // 未授权时给出引导
-        const msg = String(err?.errMsg || '')
-        if (msg.includes('auth') || msg.includes('authorize') || msg.includes('deny')) {
-          wx.showModal({
-            title: '需要相册权限',
-            content: '请在「设置」中开启保存到相册权限。',
-            confirmText: '去设置',
-            success: r => {
-              if (r.confirm) wx.openSetting({})
-            },
-          })
-        } else {
-          wx.showToast({ title: '导出失败', icon: 'none' })
-        }
-      } finally {
-        wx.hideLoading()
-      }
-    },
 
     onGoSettings() {
       wx.navigateTo({ url: '/pages/settings/settings' })
