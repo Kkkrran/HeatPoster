@@ -1,5 +1,6 @@
 // 导入打印管理模块
 import { PrintManager, DEFAULT_PRINT_SETTINGS } from '../editor/printManager'
+import drawQrcode from '../../SUPVANAPIT50PRO/weapp.qrcode.esm.js'
 
 Page({
   data: {
@@ -579,56 +580,106 @@ Page({
          const tempFile = await this.getComposedImage()
          
          const openid = this.data.openid || 'unknown'
-         const id = this.data.artworkId || Date.now().toString()
+         const id = this.data.artworkId
+         const cloudPath = `MaoBi/${openid}/${id}.jpg`
          
-         this.toast('正在请求上传授权...', 'loading')
-
-         // 1. 获取 COS 授权 (文件名使用 MaoBi/...)
-         const authRes = await wx.cloud.callFunction({
-           name: 'cosHelper',
-           data: {
-             fileName: `${id}.jpg`,
-             prefix: `MaoBi/${openid}/` // 传递自定义前缀
-           }
-         })
-
-         const authData = authRes.result as any
-         if (!authData || !authData.success) {
-           throw new Error(authData?.error || '获取COS授权失败')
-         }
-
-         // 2. 直传 COS
-         await new Promise((resolve, reject) => {
-            wx.uploadFile({
-              url: authData.uploadUrl,
-              filePath: tempFile as string,
-              name: 'file',
-              formData: authData.formData,
-              success: (res) => {
-                if (res.statusCode === 200 || res.statusCode === 204) {
-                   resolve(res)
-                } else {
-                   reject(new Error(`上传失败: ${res.statusCode}`))
-                }
-              },
-              fail: reject
-            })
+         const uploadRes = await wx.cloud.uploadFile({
+             cloudPath,
+             filePath: tempFile as string
          })
          
-         // 3. 返回下载URL
-         const fileUrl = authData.downloadUrl
-         if (!fileUrl) {
-           throw new Error('获取下载URL失败')
+         this.toast('保存成功', 'success')
+         
+         // 显示二维码
+         if (uploadRes.fileID) {
+             this.showDownloadQrCode(uploadRes.fileID)
          }
          
-         return fileUrl
+         return uploadRes.fileID
      } catch (e) {
          console.error('Upload to cloud storage failed', e)
          throw e
      }
   },
+  
+  // 真正的生成二维码实现
+  async drawQrCodeToPath(url: string): Promise<string> {
+     return new Promise((resolve, reject) => {
+         const query = this.createSelectorQuery()
+         // 查找我们在 wxml 中添加的隐藏 canvas
+         query.select('#qrCodeCanvas')
+            .fields({ node: true, size: true })
+            .exec(async (res) => {
+                if (!res[0] || !res[0].node) {
+                    console.error('Canvas #qrCodeCanvas not found')
+                    reject('Canvas not found')
+                    return
+                }
+                const canvas = res[0].node
+                const ctx = canvas.getContext('2d')
+                const dpr = wx.getSystemInfoSync().pixelRatio || 1
+                
+                const width = res[0].width
+                const height = res[0].height
+                
+                canvas.width = width * dpr
+                canvas.height = height * dpr
+                ctx.scale(dpr, dpr)
+                
+                // 清空
+                ctx.clearRect(0, 0, width, height)
+                
+                // 绘制二维码
+                drawQrcode({
+                    canvas: canvas,
+                    canvasId: 'qrCodeCanvas',
+                    width: width,
+                    height: height,
+                    padding: 0,
+                    text: url,
+                    background: '#ffffff',
+                    foreground: '#000000',
+                })
+                
+                // 导出为临时路径
+                setTimeout(() => {
+                    wx.canvasToTempFilePath({
+                        canvas: canvas,
+                        success: (res) => {
+                            resolve(res.tempFilePath)
+                        },
+                        fail: reject
+                    })
+                }, 200)
+            })
+     })
+  },
 
-  // 二维码相关功能已移除，不再需要
+  async showDownloadQrCode(fileID: string) {
+       try {
+           const res = await wx.cloud.getTempFileURL({ fileList: [fileID] })
+           if (!res.fileList || !res.fileList[0].tempFileURL) return
+           
+           const url = res.fileList[0].tempFileURL
+           console.log('Generating QR code for:', url)
+           const qrPath = await this.drawQrCodeToPath(url)
+           
+           this.setData({ qrCodeUrl: qrPath })
+       } catch (e) {
+           console.error('Show QR Code failed', e)
+       }
+  },
+
+  preventBubble() {},
+  
+  preventScroll() {},
+
+  onCloseQrCode() {
+      this.setData({ 
+          qrCodeUrl: '',
+          isCanvasHidden: false 
+      })
+  },
   
   toast(message: string, theme: 'success' | 'error' | 'loading' = 'success') {
       const t = this.selectComponent('#t-toast') as any
