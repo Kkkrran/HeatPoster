@@ -13,7 +13,7 @@ const REGION = 'ap-guangzhou'
 const COS_HOST = `${BUCKET}.cos.${REGION}.myqcloud.com`
 
 exports.main = async (event, context) => {
-  const { fileName, prefix } = event
+  const { fileName } = event
   const { OPENID } = cloud.getWXContext()
 
   if (!TENCENT_SECRET_ID || !TENCENT_SECRET_KEY) {
@@ -21,16 +21,8 @@ exports.main = async (event, context) => {
   }
 
   // 1. 生成存储路径
-  // 如果调用方传递了 prefix（如毛笔模块），则使用自定义前缀，否则使用默认的 print_temp
   // 使用时间戳防止文件名冲突
-  let key
-  if (prefix) {
-     // 去掉首尾斜杠防止双斜杠
-     const cleanPrefix = prefix.replace(/\/$/, '')
-     key = `${cleanPrefix}/${fileName || Date.now() + '.jpg'}`
-  } else {
-     key = `print_temp/${OPENID}/${Date.now()}_${fileName || 'print.jpg'}`
-  }
+  const key = `print_temp/${OPENID}/${Date.now()}_${fileName || 'print.jpg'}`
 
   // 2. 初始化 COS SDK (用于生成下载链接)
   const cos = new COS({

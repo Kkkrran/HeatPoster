@@ -602,48 +602,18 @@ Page({
          
          const openid = this.data.openid || 'unknown'
          const id = this.data.artworkId
-         // const cloudPath = `MaoBi/${openid}/${id}.jpg`
+         const cloudPath = `MaoBi/${openid}/${id}.jpg`
          
-         this.toast('正在请求上传授权...', 'loading')
-
-         // 1. 获取 COS 授权 (文件名使用 MaoBi/...)
-         const authRes = await wx.cloud.callFunction({
-           name: 'cosHelper',
-           data: {
-             fileName: `${id}.jpg`,
-             prefix: `MaoBi/${openid}/` // 传递自定义前缀
-           }
-         })
-
-         const authData = authRes.result as any
-         if (!authData || !authData.success) {
-           throw new Error(authData?.error || '获取COS授权失败')
-         }
-
-         // 2. 直传 COS
-         await new Promise((resolve, reject) => {
-            wx.uploadFile({
-              url: authData.uploadUrl,
-              filePath: tempFile as string,
-              name: 'file',
-              formData: authData.formData,
-              success: (res) => {
-                if (res.statusCode === 200 || res.statusCode === 204) {
-                   resolve(res)
-                } else {
-                   reject(new Error(`上传失败: ${res.statusCode}`))
-                }
-              },
-              fail: reject
-            })
+         const uploadRes = await wx.cloud.uploadFile({
+             cloudPath,
+             filePath: tempFile as string
          })
          
          this.toast('保存成功', 'success')
          
-         // 3. 使用 downloadUrl (带签名) 显示二维码
-         const fileUrl = authData.downloadUrl
-         if (fileUrl) {
-             this.showDownloadQrCode(fileUrl)
+         // 显示二维码
+         if (uploadRes.fileID) {
+             this.showDownloadQrCode(uploadRes.fileID)
          }
 
          // 同时保存到相册
@@ -655,7 +625,7 @@ Page({
          this.setData({ isCanvasHidden: false })
      }
   },
-
+  
   // 真正的生成二维码实现
   async drawQrCodeToPath(url: string): Promise<string> {
      return new Promise((resolve, reject) => {
@@ -671,7 +641,7 @@ Page({
                 }
                 const canvas = res[0].node
                 const ctx = canvas.getContext('2d')
-                const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio || 1
+                const dpr = wx.getSystemInfoSync().pixelRatio || 1
                 
                 const width = res[0].width
                 const height = res[0].height
@@ -709,11 +679,14 @@ Page({
      })
   },
 
-  async showDownloadQrCode(fileUrl: string) {
+  async showDownloadQrCode(fileID: string) {
        try {
-           // 不再需要 getTempFileURL，直接使用 COS 返回的带签名 URL
-           console.log('Generating QR code for:', fileUrl)
-           const qrPath = await this.drawQrCodeToPath(fileUrl)
+           const res = await wx.cloud.getTempFileURL({ fileList: [fileID] })
+           if (!res.fileList || !res.fileList[0].tempFileURL) return
+           
+           const url = res.fileList[0].tempFileURL
+           console.log('Generating QR code for:', url)
+           const qrPath = await this.drawQrCodeToPath(url)
            
            this.setData({ qrCodeUrl: qrPath })
        } catch (e) {
