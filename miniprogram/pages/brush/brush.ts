@@ -1,4 +1,3 @@
-import drawQrcode from '../../SUPVANAPIT50PRO/weapp.qrcode.esm.js'
 // 导入打印管理模块
 import { PrintManager, DEFAULT_PRINT_SETTINGS } from '../editor/printManager'
 
@@ -18,7 +17,6 @@ Page({
     artworkId: '',
     isCanvasHidden: false,
     snapshotUrl: '',
-    qrCodeUrl: '', // 下载链接的二维码图片路径
     
     // 打印相关
     connectedDevice: null as any,
@@ -573,36 +571,15 @@ Page({
     })
   },
   
-  async onSave() {
-     this.toast('保存中...', 'loading')
-     this.setData({ toolsVisible: false })
-
-     // 保存前先生成快照并隐藏 Canvas，防止遮挡即将显示的二维码
-     if (this.canvas) {
-        try {
-            const snapshotUrl = await this.getSnapshotImage()
-            this.setData({
-                snapshotUrl,
-                isCanvasHidden: true
-            })
-        } catch (err) {
-            console.error('Snapshot failed', err)
-        }
-        this.executeSave()
-     } else {
-         this.executeSave()
-     }
-  },
-
-  async executeSave() {
+  // 保存功能已合并到打印流程中，保留此方法供其他需要时调用
+  async uploadToCloudStorage(): Promise<string> {
      try {
          // 获取包含背景和笔触的合成图片
          // @ts-ignore
          const tempFile = await this.getComposedImage()
          
          const openid = this.data.openid || 'unknown'
-         const id = this.data.artworkId
-         // const cloudPath = `MaoBi/${openid}/${id}.jpg`
+         const id = this.data.artworkId || Date.now().toString()
          
          this.toast('正在请求上传授权...', 'loading')
 
@@ -638,99 +615,20 @@ Page({
             })
          })
          
-         this.toast('保存成功', 'success')
-         
-         // 3. 使用 downloadUrl (带签名) 显示二维码
+         // 3. 返回下载URL
          const fileUrl = authData.downloadUrl
-         if (fileUrl) {
-             this.showDownloadQrCode(fileUrl)
+         if (!fileUrl) {
+           throw new Error('获取下载URL失败')
          }
-
-         // 同时保存到相册
-         await this.saveToAlbum(tempFile as string)
+         
+         return fileUrl
      } catch (e) {
-         console.error('Save failed', e)
-         this.toast('保存失败', 'error')
-         // 如果失败，恢复 Canvas
-         this.setData({ isCanvasHidden: false })
+         console.error('Upload to cloud storage failed', e)
+         throw e
      }
   },
 
-  // 真正的生成二维码实现
-  async drawQrCodeToPath(url: string): Promise<string> {
-     return new Promise((resolve, reject) => {
-         const query = this.createSelectorQuery()
-         // 查找我们在 wxml 中添加的隐藏 canvas
-         query.select('#qrCodeCanvas')
-            .fields({ node: true, size: true })
-            .exec(async (res) => {
-                if (!res[0] || !res[0].node) {
-                    console.error('Canvas #qrCodeCanvas not found')
-                    reject('Canvas not found')
-                    return
-                }
-                const canvas = res[0].node
-                const ctx = canvas.getContext('2d')
-                const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio || 1
-                
-                const width = res[0].width
-                const height = res[0].height
-                
-                canvas.width = width * dpr
-                canvas.height = height * dpr
-                ctx.scale(dpr, dpr)
-                
-                // 清空
-                ctx.clearRect(0, 0, width, height)
-                
-                // 绘制二维码
-                drawQrcode({
-                    canvas: canvas,
-                    canvasId: 'qrCodeCanvas',
-                    width: width,
-                    height: height,
-                    padding: 0,
-                    text: url,
-                    background: '#ffffff',
-                    foreground: '#000000',
-                })
-                
-                // 导出为临时路径
-                setTimeout(() => {
-                    wx.canvasToTempFilePath({
-                        canvas: canvas,
-                        success: (res) => {
-                            resolve(res.tempFilePath)
-                        },
-                        fail: reject
-                    })
-                }, 200)
-            })
-     })
-  },
-
-  async showDownloadQrCode(fileUrl: string) {
-       try {
-           // 不再需要 getTempFileURL，直接使用 COS 返回的带签名 URL
-           console.log('Generating QR code for:', fileUrl)
-           const qrPath = await this.drawQrCodeToPath(fileUrl)
-           
-           this.setData({ qrCodeUrl: qrPath })
-       } catch (e) {
-           console.error('Show QR Code failed', e)
-       }
-  },
-
-  preventBubble() {},
-  
-  preventScroll() {},
-
-  onCloseQrCode() {
-      this.setData({ 
-          qrCodeUrl: '',
-          isCanvasHidden: false 
-      })
-  },
+  // 二维码相关功能已移除，不再需要
   
   toast(message: string, theme: 'success' | 'error' | 'loading' = 'success') {
       const t = this.selectComponent('#t-toast') as any
@@ -843,7 +741,7 @@ Page({
     this.setData({ printSettingsVisible: e.detail.visible })
   },
 
-  // 确认打印 - 执行实际打印操作
+  // 确认打印 - 执行实际打印操作（包含保存和上传）
   async onConfirmPrint() {
     const self = this as any
     
@@ -875,10 +773,71 @@ Page({
     }
 
     try {
-      // 使用打印管理器执行打印，使用 getComposedImage 方法生成图片
-      await self.printManager.print('', () => this.getComposedImage())
+      this.toast('正在保存并上传...', 'loading')
+      
+      // 1. 生成合成图片
+      const tempFile = await this.getComposedImage()
+      
+      const openid = this.data.openid || 'unknown'
+      const id = this.data.artworkId || Date.now().toString()
+      
+      // 2. 获取 COS 授权并上传
+      this.toast('正在上传到云存储...', 'loading')
+      
+      const authRes = await wx.cloud.callFunction({
+        name: 'cosHelper',
+        data: {
+          fileName: `${id}.jpg`,
+          prefix: `MaoBi/${openid}/` // 使用保存路径
+        }
+      })
+
+      const authData = authRes.result as any
+      if (!authData || !authData.success) {
+        throw new Error(authData?.error || '获取COS授权失败')
+      }
+
+      // 3. 上传到 COS
+      await new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: authData.uploadUrl,
+          filePath: tempFile as string,
+          name: 'file',
+          formData: authData.formData,
+          success: (res) => {
+            if (res.statusCode === 200 || res.statusCode === 204) {
+              resolve(res)
+            } else {
+              reject(new Error(`上传失败: ${res.statusCode}`))
+            }
+          },
+          fail: reject
+        })
+      })
+      
+      // 4. 获取云存储URL
+      const imageUrl = authData.downloadUrl
+      if (!imageUrl) {
+        throw new Error('获取云存储URL失败')
+      }
+      
+      console.log('图片已上传到云存储，URL:', imageUrl)
+      
+      // 5. 同时保存到相册（可选，不阻塞打印）
+      this.saveToAlbum(tempFile as string).catch(err => {
+        console.warn('保存到相册失败', err)
+      })
+      
+      // 6. 使用本地文件路径进行打印（printManager会进行预处理并上传到print_temp路径）
+      // 注意：虽然我们已经上传到MaoBi路径保存，但打印需要预处理图片并上传到print_temp路径
+      // 所以传入本地文件路径，让printManager进行预处理和上传
+      this.toast('正在打印...', 'loading')
+      // 传入本地文件路径，printManager会进行预处理并上传到print_temp路径
+      await self.printManager.print(tempFile as string, () => Promise.resolve(tempFile))
+      
     } catch (error) {
       console.error('打印失败', error)
+      this.toast('打印失败', 'error')
       // 错误已在 printManager 中处理
     }
   },

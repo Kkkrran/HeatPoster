@@ -250,10 +250,16 @@ Page({
   },
 
   loadBrushPreferences() {
-    const pureBlackBrush = !!wx.getStorageSync('editor_pure_black_brush')
+    // 纯黑画笔功能已被禁用（界面开关已注释），强制使用热力图模式
+    // 清除可能存在的旧配置，确保始终使用热力图
+    const storedPureBlack = wx.getStorageSync('editor_pure_black_brush')
+    if (storedPureBlack) {
+      wx.removeStorageSync('editor_pure_black_brush')
+    }
+    const pureBlackBrush = false // 强制禁用纯黑画笔，始终使用热力图
     const prevMode = !!this.data.pureBlackBrush
     const modeChanged = pureBlackBrush !== prevMode
-    const config = pureBlackBrush ? BRUSH_CONFIG.pureBlack : BRUSH_CONFIG.normal
+    const config = BRUSH_CONFIG.normal // 始终使用正常热力图配置
 
     const currentHeat = this.data.heatRate ?? config.heatRate
     const currentRadius = this.data.brushRadius ?? config.radius
