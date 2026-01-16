@@ -6,21 +6,26 @@
   
   <view class="section">
     <t-cell-group>
+      <t-cell title="重置所有设置" description="恢复初始设置">
+        <view slot="note">
+          <t-button variant="outline" size="small" theme="danger" bindtap="onResetAllSettings">重置</t-button>
+        </view>
+      </t-cell>
       <t-cell title="选择热力图背景" description="{{selectedBgEditorName }}" bindtap="onGoBgSelectEditor" arrow />
       <t-cell title="选择毛笔页背景" description="{{selectedBgBrushName }}" bindtap="onGoBgSelectBrush" arrow />
       <t-cell title="相册" description="查看所有热力图作品" bindtap="onGoAlbum" arrow />
+      <t-cell title="相册自动滚动速度" description="数值越小越慢(10-999)" note="{{albumScrollSpeed}}" bindtap="onEditScrollSpeed" arrow />
 <!--
       <t-cell title="纯黑画笔" description="开启后画笔颜色固定为黑色">
         <t-switch slot="note" value="{{pureBlackBrush}}" bind:change="onPureBlackBrushChange" />
       </t-cell>
 -->
-      <t-cell title="清理缓存" description="删除本地临时文件与缩略图（不删除作品库索引）">
+      <t-cell title="清理缓存" description="删除本地临时文件与缩略图">
         <view slot="note">
           <t-button variant="outline" size="small" theme="default" bindtap="onClearCache">清理</t-button>
         </view>
       </t-cell>
       <t-cell title="撤回步数上限" description="点击修改" note="{{maxUndoSteps}}" bindtap="onEditUndoLimit" arrow />
-      <t-cell title="相册自动滚动速度" description="数值越小越慢(10-999)" note="{{albumScrollSpeed}}" bindtap="onEditScrollSpeed" arrow />
       <t-cell title="退出时提示保存" description="若有未保存更改，退出编辑页时进行提示">
         <t-switch slot="note" value="{{exitConfirm}}" bind:change="onExitConfirmChange" />
       </t-cell>

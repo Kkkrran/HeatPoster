@@ -533,6 +533,45 @@ Component({
           if (res.confirm) wx.openSetting({})
         }
       })
-    }
+    },
+
+    // 重置所有设置
+    onResetAllSettings() {
+      const self = this as any
+      wx.showModal({
+        title: '重置确认',
+        content: '确定要将所有设置和背景恢复到初始状态吗？',
+        confirmColor: '#d60000',
+        success(res) {
+          if (res.confirm) {
+            // 清除相关设置的 Storage
+            wx.removeStorageSync(STORAGE_KEYS.EXIT_CONFIRM)
+            wx.removeStorageSync(STORAGE_KEYS.MAX_UNDO)
+            wx.removeStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED)
+            wx.removeStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
+            wx.removeStorageSync('selected_background_editor')
+            wx.removeStorageSync('selected_background_brush')
+
+            // 恢复页面数据为默认值
+            self.setData({
+              exitConfirm: false,
+              maxUndoSteps: 10,
+              albumScrollSpeed: 100,
+              pureBlackBrush: false,
+              selectedBgEditorName: 'bgeditor',
+              selectedBgBrushName: 'bgbrush'
+            })
+
+            // 重新加载背景设置确保显示正确
+            self.loadSelectedBackground()
+
+            wx.showToast({
+              title: '已重置',
+              icon: 'success'
+            })
+          }
+        }
+      })
+    },
   }
 })
