@@ -28,16 +28,16 @@ page {
 }
 
 .content {
-  padding: 0 2vw; /* 使用 padding 来控制两侧留白，更自然适应不同屏幕 */
+  padding: 0;
   box-sizing: border-box;
   width: 100%;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24rpx;
-  padding-top: 16rpx;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+  padding-top: 0;
   /* 移除固定宽度和 margin-auto，让 grid 自然填充 content 区域 */
 }
 
@@ -45,12 +45,12 @@ page {
   position: relative;
   overflow: hidden;
   background: #ffffff;
-  border-radius: 8rpx;
+  border-radius: 0;
 }
 
 .image-wrapper {
   width: 100%;
-  padding-bottom: 133.33%; /* 3:4 ratio */
+  padding-bottom: 100%; /* 1:1 ratio */
   position: relative;
   overflow: hidden;
 }
