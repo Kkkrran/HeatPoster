@@ -15,9 +15,9 @@ interface HeatPoint {
 
 // 已移除 MAX_EXPORT_WIDTH 和 MAX_EXPORT_HEIGHT，现在使用统一的标准尺寸
 
-const BRUSH_RADIUS_RANGE = { min: 6, max: 60 }
+const BRUSH_RADIUS_RANGE = { min: 10, max: 120 }
 const BRUSH_CONFIG = {
-  normal: { radius: 40, heatRate: 0.6, heatMin: 0.2, heatMax: 3 },
+  normal: { radius: 60, heatRate: 3, heatMin: 0.6, heatMax: 5 },
   pureBlack: { radius: 6, heatRate: 10, heatMin: 3, heatMax: 10 }
 }
 
@@ -62,8 +62,8 @@ Page({
 
   data: {
     toolsVisible: false,
-    brushRadius: 40,
-    heatRate: 0.6,
+    brushRadius: 60,
+    heatRate: 3,
     brushRadiusMin: BRUSH_RADIUS_RANGE.min,
     brushRadiusMax: BRUSH_RADIUS_RANGE.max,
     heatRateMin: BRUSH_CONFIG.normal.heatMin,
