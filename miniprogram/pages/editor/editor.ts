@@ -812,12 +812,11 @@ Page({
     const originalHeight = self.height * dpr
 
     // 统一使用固定标准尺寸（基于手机参数，确保所有设备生成相同尺寸的图片）
-    // 手机参数：画布尺寸约 956x1274，宽高比约 0.75
-    // 使用固定标准尺寸：1400x1867（宽高比 0.75，接近手机画布比例）
-    const standardWidth = 1400
-    const standardHeight = 1867
+    // 使用固定标准尺寸：810x810（宽高比 1，最大边不超过810）
+    const standardWidth = 810
+    const standardHeight = 810
     
-    console.log('统一图片生成尺寸（固定标准尺寸，基于手机参数）:', {
+    console.log('统一图片生成尺寸（固定标准尺寸，基于手机参数，限制最大810）:', {
       原始尺寸: `${originalWidth}x${originalHeight}`,
       原始宽高比: (originalWidth / originalHeight).toFixed(3),
       标准尺寸: `${standardWidth}x${standardHeight}`,
