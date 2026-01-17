@@ -14,5 +14,10 @@ Page({
     wx.navigateTo({
       url: '/pages/album/album'
     })
+  },
+  goToSettings() {
+    wx.navigateTo({
+      url: '/pages/settings/settings'
+    })
   }
 })
