@@ -325,21 +325,22 @@ Page({
     const self = this as any
     if (!self.canvas) return Promise.reject('Canvas not initialized')
 
-    // 使用 Canvas 的实际物理尺寸
-    const width = self.canvas.width
-    const height = self.canvas.height
-    // 注意：self.canvas.width/height 已经是 dpr 缩放后的像素尺寸
+    // 使用固定标准尺寸（最大边不超过810和1080）
+    // 假设原始比例约为 0.75，这里设置为 810x1080
+    // 如果需要更严格的比例，可以根据实际情况调整
+    const standardWidth = 810
+    const standardHeight = 1080
 
-    // 创建离屏 Canvas 用于合成
+    // 创建离屏 Canvas 用于合成（使用标准尺寸）
     // @ts-ignore
-    const offCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
+    const offCanvas = wx.createOffscreenCanvas({ type: '2d', width: standardWidth, height: standardHeight })
     const offCtx = offCanvas.getContext('2d')
 
     // 1. 填充白底
     offCtx.fillStyle = '#ffffff'
-    offCtx.fillRect(0, 0, width, height)
+    offCtx.fillRect(0, 0, standardWidth, standardHeight)
 
-    // 2. 绘制常驻背景
+    // 2. 绘制常驻背景（拉伸填满）
     if (this.data.permanentBackgroundImage) {
       // @ts-ignore
       const img = offCanvas.createImage()
@@ -348,16 +349,18 @@ Page({
         img.onerror = resolve
         img.src = this.data.permanentBackgroundImage
       })
-      offCtx.drawImage(img, 0, 0, width, height)
+      offCtx.drawImage(img, 0, 0, standardWidth, standardHeight)
     }
 
-    // 3. 绘制当前笔迹
-    offCtx.drawImage(self.canvas, 0, 0, width, height)
+    // 3. 绘制当前笔迹（拉伸填满）
+    offCtx.drawImage(self.canvas, 0, 0, standardWidth, standardHeight)
 
     // 4. 导出 JPG
     return new Promise((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas: offCanvas,
+        destWidth: standardWidth,
+        destHeight: standardHeight,
         fileType: 'jpg',
         quality: quality,
         success: (res) => resolve(res.tempFilePath),
