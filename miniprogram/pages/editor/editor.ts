@@ -1026,12 +1026,19 @@ Page({
   preventScroll() {},
 
   onCloseQrCode() {
-      // 关闭二维码时，我们要把Canvas恢复显示
+      // 关闭二维码时，我们要把Canvas恢复显示，并新建画布
+      const self = this as any
+      self.strokes = []
+      self.redoStack = [] // 兼容性保留
+      
       this.setData({ 
           qrCodeUrl: '',
-          // 如果之前因为显示二维码而隐藏了Canvas，现在恢复它
-          // 注意：如果还有其他弹窗（如工具栏），需根据逻辑判断，目前只处理二维码关闭
-          isCanvasHidden: false 
+          isCanvasHidden: false, 
+          // 新建作品状态
+          artworkId: '',
+          hasUnsavedChanges: false
       })
+      this.updateExitConfirmState()
+      this.redrawAll()
   },
 })

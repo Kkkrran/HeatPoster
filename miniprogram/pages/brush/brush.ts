@@ -684,8 +684,15 @@ Page({
   onCloseQrCode() {
       this.setData({ 
           qrCodeUrl: '',
-          isCanvasHidden: false 
+          isCanvasHidden: false,
+          artworkId: `practice_${Date.now()}`
       })
+      
+      // 完全重置画布和历史
+      this.history = []
+      this.historyIndex = -1
+      this.drawBackground()
+      this.saveHistory() // 保存初始空白状态
   },
   
   toast(message: string, theme: 'success' | 'error' | 'loading' = 'success') {
