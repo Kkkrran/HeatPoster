@@ -6,8 +6,8 @@
       <view class="circle-btn {{!canUndo ? 'disabled' : ''}}" bindtap="onUndo">撤回</view>
       <view class="circle-btn {{!canRedo ? 'disabled' : ''}}" bindtap="onRedo">重做</view>
     </view>
-    
-    <view class="circle-btn" bindtap="openTools">工具</view>
+
+    <view class="circle-btn danger" bindtap="onClear">清空画布</view>
 
     <view class="top-right">
       <view class="rect-btn primary" bindtap="onSave" style="position: relative;">
@@ -68,7 +68,6 @@
         <view>
           <view class="sheet-title">工具与设置</view>
         </view>
-        <t-button theme="danger" variant="base" size="small" bindtap="onClear">清空画布</t-button>
       </view>
 
       <view class="slider-row">

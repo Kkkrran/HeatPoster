@@ -1,0 +1,8 @@
+<view class="container">
+  <view class="title">请选择绘画模式</view>
+  <view class="button-group">
+    <button class="mode-btn" bindtap="goToEditor">热敏</button>
+    <button class="mode-btn" bindtap="goToBrush">毛笔</button>
+    <button class="mode-btn" bindtap="goToAlbum">相册</button>
+  </view>
+</view>

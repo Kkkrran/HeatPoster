@@ -1,6 +1,7 @@
 {
   "cloud": true,
   "pages": [
+    "pages/guide/guide",
     "pages/index/index",
     "pages/editor/editor",
     "pages/brush/brush",
@@ -28,5 +29,6 @@
   },
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",
-  "resizable": true
+  "resizable": true,
+  "entryPagePath": "pages/guide/guide"
 }
