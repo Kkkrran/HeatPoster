@@ -83,7 +83,7 @@
   </view>
 
   <view class="bottom">
-    <t-button variant="outline" theme="default" block bindtap="onBackHome">返回作品库</t-button>
+    <t-button variant="outline" theme="default" block bindtap="onBackHome">返回</t-button>
   </view>
 
   <t-dialog

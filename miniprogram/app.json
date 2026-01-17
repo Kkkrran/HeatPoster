@@ -2,7 +2,6 @@
   "cloud": true,
   "pages": [
     "pages/guide/guide",
-    "pages/index/index",
     "pages/editor/editor",
     "pages/brush/brush",
     "pages/settings/settings",
