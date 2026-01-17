@@ -6,11 +6,6 @@
   
   <view class="section">
     <t-cell-group>
-      <t-cell title="重置所有设置" description="恢复初始设置">
-        <view slot="note">
-          <t-button variant="outline" size="small" theme="danger" bindtap="onResetAllSettings">重置</t-button>
-        </view>
-      </t-cell>
       <t-cell title="选择热力图背景" description="{{selectedBgEditorName }}" bindtap="onGoBgSelectEditor" arrow />
       <t-cell title="选择毛笔页背景" description="{{selectedBgBrushName }}" bindtap="onGoBgSelectBrush" arrow />
       <t-cell title="相册" description="查看所有热力图作品" bindtap="onGoAlbum" arrow />
