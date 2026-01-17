@@ -33,8 +33,6 @@ Component({
     connectedDevice: null,
     isScanning: false,
     cloudImageUrl: '', // 云存储图片的临时路径
-    selectedBgEditorName: '', // 当前选择的编辑器背景文件名
-    selectedBgBrushName: '', // 当前选择的画笔背景文件名
     consumableInfoVisible: false, // 耗材信息对话框显示状态
     consumableInfo: null, // 耗材信息数据
   },
@@ -55,9 +53,6 @@ Component({
       // 这样可以确保每次打开小程序时都是未连接状态，需要重新搜索和连接
       self.setData({ connectedDevice: null })
       
-      // 加载选择的背景
-      self.loadSelectedBackground()
-      
       self.setData({ 
         exitConfirm, 
         maxUndoSteps,
@@ -75,45 +70,6 @@ Component({
   },
 
   methods: {
-    loadSelectedBackground() {
-      const self = this as any
-      
-      // Load Editor Background
-      let selectedBgEditor = wx.getStorageSync('selected_background_editor')
-      // Default fallback
-      if (!selectedBgEditor) {
-        selectedBgEditor = { name: 'bgeditor' }
-      }
-
-      let editorFileName = ''
-      if (selectedBgEditor && selectedBgEditor.name) {
-          editorFileName = selectedBgEditor.name
-          if (editorFileName !== 'bgeditor' && !editorFileName.includes('.')) {
-              editorFileName += '.png'
-          }
-      }
-
-      // Load Brush Background
-      let selectedBgBrush = wx.getStorageSync('selected_background_brush')
-      // Default fallback
-      if (!selectedBgBrush) {
-        selectedBgBrush = { name: 'bgbrush' }
-      }
-
-      let brushFileName = ''
-      if (selectedBgBrush && selectedBgBrush.name) {
-          brushFileName = selectedBgBrush.name
-          if (brushFileName !== 'bgbrush' && !brushFileName.includes('.')) {
-              brushFileName += '.png'
-          }
-      }
-
-      self.setData({ 
-        selectedBgEditorName: editorFileName,
-        selectedBgBrushName: brushFileName
-      })
-    },
-
     refreshAllSettings() {
       const self = this as any
       // 重新加载退出确认设置
@@ -123,8 +79,6 @@ Component({
       self.setData({ 
         exitConfirm
       })
-      
-      self.loadSelectedBackground()
     },
 
     onExitConfirmChange(e: any) {
@@ -246,15 +200,6 @@ Component({
 
     onBackHome() {
       wx.navigateBack({ delta: 1 })
-    },
-
-
-    onGoBgSelectEditor() {
-      wx.navigateTo({ url: '/pages/bgselect/bgselect?target=editor' })
-    },
-
-    onGoBgSelectBrush() {
-      wx.navigateTo({ url: '/pages/bgselect/bgselect?target=brush' })
     },
 
     onGoAlbum() {

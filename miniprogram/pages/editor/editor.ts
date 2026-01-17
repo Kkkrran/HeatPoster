@@ -127,87 +127,41 @@ Page({
       }
     },
 
-  // 加载常驻背景
+  // 加载常驻背景 (强制使用 bgeditor.jpg)
   async loadPermanentBackground() {
     try {
-      let selectedBg = wx.getStorageSync('selected_background_editor')
-
-      // 兼容性：如果新键没有值，尝试读取旧键
-      if (!selectedBg) {
-         selectedBg = wx.getStorageSync('selected_background')
-      }
+      // 强制使用默认背景 bgeditor.jpg
+      const path = '/images/bgeditor.jpg'
       
-      // 如果没有缓存，尝试加载默认背景 (bgeditor.*)
-      if (!selectedBg) {
-        const extensions = ['.png', '.jpg', '.jpeg']
-        for (const ext of extensions) {
-           const path = `/images/bgeditor${ext}`
-           try {
-             // 简单的探测，如果getImageInfo成功则认为文件存在
-             const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-               wx.getImageInfo({ 
-                 src: path,
-                 success: resolve,
-                 fail: reject
-               })
-             })
-             
-             selectedBg = {
-               name: `bgeditor${ext}`,
-               tempFilePath: path,
-               aspectRatio: imageInfo.width / imageInfo.height
-             }
-             // 找到一个就停止
-             break; 
-           } catch(e) {
-             // ignore
-           }
-        }
-      }
-
-      if (selectedBg && selectedBg.tempFilePath) {
-        // 如果有保存的常驻背景，加载它
-        this.setData({ 
-          permanentBackgroundImage: selectedBg.tempFilePath 
+      try {
+        const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
+          wx.getImageInfo({ 
+            src: path,
+            success: resolve,
+            fail: reject
+          })
         })
         
-        // 如果有宽高比信息，也保存下来
-        if (selectedBg.aspectRatio) {
-          this.setData({ 
-            permanentBackgroundAspectRatio: selectedBg.aspectRatio 
-          })
-        } else {
-          // 如果没有宽高比信息，尝试获取
-          try {
-            const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-              wx.getImageInfo({
-                src: selectedBg.tempFilePath,
-                success: resolve,
-                fail: reject,
-              })
-            })
-            const aspectRatio = imageInfo.width / imageInfo.height
-            this.setData({ permanentBackgroundAspectRatio: aspectRatio })
-            // 更新存储中的宽高比信息（仅当存在缓存记录时）
-            // 注意：如果是我们刚才构造的临时对象，这里可能不需要setStorage，
-            // 但如果用户确实需要记住这个默认状态，可以在bgselect逻辑中更早地固化。
-            // 这里为了安全起见，只更新内存中的状态，或者只更新已存在的 selected_background
-            if (wx.getStorageSync('selected_background')) {
-                wx.setStorageSync('selected_background', {
-                ...selectedBg,
-                aspectRatio
-                })
-            }
-          } catch (err) {
-            console.warn('获取常驻背景图片信息失败', err)
-          }
-        }
-      } else {
-        // 没有常驻背景，清空
         this.setData({ 
-          permanentBackgroundImage: '',
-          permanentBackgroundAspectRatio: undefined
+          permanentBackgroundImage: path,
+          permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
         })
+      } catch(e) {
+        console.warn('默认背景 bgeditor.jpg 加载失败', e)
+        // 尝试加载 png
+        try {
+          const pngPath = '/images/bgeditor.png'
+          const imageInfo = await wx.getImageInfo({ src: pngPath })
+           this.setData({ 
+            permanentBackgroundImage: pngPath,
+            permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
+          })
+        } catch(err) {
+           this.setData({ 
+            permanentBackgroundImage: '',
+            permanentBackgroundAspectRatio: undefined
+          })
+        }
       }
     } catch (err) {
       console.error('加载常驻背景失败', err)

@@ -125,51 +125,31 @@ Page({
 
   async loadPermanentBackground() {
     try {
-      let selectedBg = wx.getStorageSync('selected_background_brush')
+      // 强制使用默认背景 bgbrush.jpg
+      const path = '/images/bgbrush.jpg'
       
-      // 兼容性
-      if (!selectedBg) {
-        selectedBg = wx.getStorageSync('selected_background')
-      }
-
-      // 如果没有缓存，尝试加载默认背景 (bgbrush.*)
-      if (!selectedBg) {
-        const extensions = ['.png', '.jpg', '.jpeg']
-        for (const ext of extensions) {
-           const path = `/images/bgbrush${ext}`
-           try {
-             const imageInfo = await wx.getImageInfo({ src: path })
-             
-             selectedBg = {
-               name: `bgbrush${ext}`,
-               tempFilePath: path,
-               aspectRatio: imageInfo.width / imageInfo.height
-             }
-             break; 
-           } catch(e) {
-             // ignore
-           }
-        }
-      }
-
-      if (selectedBg && selectedBg.tempFilePath) {
-        this.setData({ 
-          permanentBackgroundImage: selectedBg.tempFilePath 
-        })
-        if (selectedBg.aspectRatio) {
-          this.setData({ permanentBackgroundAspectRatio: selectedBg.aspectRatio })
-        } else {
-            // Calculate if missing
-            const imageInfo = await wx.getImageInfo({ src: selectedBg.tempFilePath })
-            const ar = imageInfo.width / imageInfo.height
-            this.setData({ permanentBackgroundAspectRatio: ar })
-        }
-      } else {
-        // 如果依然没有背景（例如默认背景图加载失败），确保清空状态
+      try {
+         const imageInfo = await wx.getImageInfo({ src: path })
          this.setData({ 
-          permanentBackgroundImage: '',
-          permanentBackgroundAspectRatio: undefined 
-        })
+           permanentBackgroundImage: path,
+           permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
+         })
+      } catch(e) {
+         console.warn('默认背景 bgbrush.jpg 加载失败', e)
+         // 尝试加载 png
+         try {
+            const pngPath = '/images/bgbrush.png'
+            const imageInfo = await wx.getImageInfo({ src: pngPath })
+            this.setData({ 
+              permanentBackgroundImage: pngPath,
+              permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
+            })
+         } catch(err) {
+            this.setData({ 
+                permanentBackgroundImage: '',
+                permanentBackgroundAspectRatio: undefined 
+            })
+         }
       }
       
       // 重新布局 Canvas
