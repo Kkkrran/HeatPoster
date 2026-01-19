@@ -124,51 +124,31 @@ Page({
 
   async loadPermanentBackground() {
     try {
-      let selectedBg = wx.getStorageSync('selected_background_brush')
+      // 强制使用默认背景 bgbrush.jpg
+      const path = '/images/bgbrush.jpg'
       
-      // 兼容性
-      if (!selectedBg) {
-        selectedBg = wx.getStorageSync('selected_background')
-      }
-
-      // 如果没有缓存，尝试加载默认背景 (bgbrush.*)
-      if (!selectedBg) {
-        const extensions = ['.png', '.jpg', '.jpeg']
-        for (const ext of extensions) {
-           const path = `/images/bgbrush${ext}`
-           try {
-             const imageInfo = await wx.getImageInfo({ src: path })
-             
-             selectedBg = {
-               name: `bgbrush${ext}`,
-               tempFilePath: path,
-               aspectRatio: imageInfo.width / imageInfo.height
-             }
-             break; 
-           } catch(e) {
-             // ignore
-           }
-        }
-      }
-
-      if (selectedBg && selectedBg.tempFilePath) {
-        this.setData({ 
-          permanentBackgroundImage: selectedBg.tempFilePath 
-        })
-        if (selectedBg.aspectRatio) {
-          this.setData({ permanentBackgroundAspectRatio: selectedBg.aspectRatio })
-        } else {
-            // Calculate if missing
-            const imageInfo = await wx.getImageInfo({ src: selectedBg.tempFilePath })
-            const ar = imageInfo.width / imageInfo.height
-            this.setData({ permanentBackgroundAspectRatio: ar })
-        }
-      } else {
-        // 如果依然没有背景（例如默认背景图加载失败），确保清空状态
+      try {
+         const imageInfo = await wx.getImageInfo({ src: path })
          this.setData({ 
-          permanentBackgroundImage: '',
-          permanentBackgroundAspectRatio: undefined 
-        })
+           permanentBackgroundImage: path,
+           permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
+         })
+      } catch(e) {
+         console.warn('默认背景 bgbrush.jpg 加载失败', e)
+         // 尝试加载 png
+         try {
+            const pngPath = '/images/bgbrush.png'
+            const imageInfo = await wx.getImageInfo({ src: pngPath })
+            this.setData({ 
+              permanentBackgroundImage: pngPath,
+              permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
+            })
+         } catch(err) {
+            this.setData({ 
+                permanentBackgroundImage: '',
+                permanentBackgroundAspectRatio: undefined 
+            })
+         }
       }
       
       // 重新布局 Canvas
@@ -324,21 +304,22 @@ Page({
     const self = this as any
     if (!self.canvas) return Promise.reject('Canvas not initialized')
 
-    // 使用 Canvas 的实际物理尺寸
-    const width = self.canvas.width
-    const height = self.canvas.height
-    // 注意：self.canvas.width/height 已经是 dpr 缩放后的像素尺寸
+    // 使用固定标准尺寸（最大边不超过810和1080）
+    // 假设原始比例约为 0.75，这里设置为 810x1080
+    // 如果需要更严格的比例，可以根据实际情况调整
+    const standardWidth = 810
+    const standardHeight = 1080
 
-    // 创建离屏 Canvas 用于合成
+    // 创建离屏 Canvas 用于合成（使用标准尺寸）
     // @ts-ignore
-    const offCanvas = wx.createOffscreenCanvas({ type: '2d', width, height })
+    const offCanvas = wx.createOffscreenCanvas({ type: '2d', width: standardWidth, height: standardHeight })
     const offCtx = offCanvas.getContext('2d')
 
     // 1. 填充白底
     offCtx.fillStyle = '#ffffff'
-    offCtx.fillRect(0, 0, width, height)
+    offCtx.fillRect(0, 0, standardWidth, standardHeight)
 
-    // 2. 绘制常驻背景
+    // 2. 绘制常驻背景（拉伸填满）
     if (this.data.permanentBackgroundImage) {
       // @ts-ignore
       const img = offCanvas.createImage()
@@ -347,16 +328,18 @@ Page({
         img.onerror = resolve
         img.src = this.data.permanentBackgroundImage
       })
-      offCtx.drawImage(img, 0, 0, width, height)
+      offCtx.drawImage(img, 0, 0, standardWidth, standardHeight)
     }
 
-    // 3. 绘制当前笔迹
-    offCtx.drawImage(self.canvas, 0, 0, width, height)
+    // 3. 绘制当前笔迹（拉伸填满）
+    offCtx.drawImage(self.canvas, 0, 0, standardWidth, standardHeight)
 
     // 4. 导出 JPG
     return new Promise((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas: offCanvas,
+        destWidth: standardWidth,
+        destHeight: standardHeight,
         fileType: 'jpg',
         quality: quality,
         success: (res) => resolve(res.tempFilePath),
@@ -677,8 +660,15 @@ Page({
   onCloseQrCode() {
       this.setData({ 
           qrCodeUrl: '',
-          isCanvasHidden: false 
+          isCanvasHidden: false,
+          artworkId: `practice_${Date.now()}`
       })
+      
+      // 完全重置画布和历史
+      this.history = []
+      this.historyIndex = -1
+      this.drawBackground()
+      this.saveHistory() // 保存初始空白状态
   },
   
   toast(message: string, theme: 'success' | 'error' | 'loading' = 'success') {

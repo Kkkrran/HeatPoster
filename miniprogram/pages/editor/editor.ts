@@ -15,61 +15,28 @@ interface HeatPoint {
 
 // 已移除 MAX_EXPORT_WIDTH 和 MAX_EXPORT_HEIGHT，现在使用统一的标准尺寸
 
-const BRUSH_RADIUS_RANGE = { min: 6, max: 60 }
+const BRUSH_RADIUS_RANGE = { min: 10, max: 120 }
 const BRUSH_CONFIG = {
-  normal: { radius: 40, heatRate: 0.6, heatMin: 0.2, heatMax: 3 },
+  normal: { radius: 60, heatRate: 3, heatMin: 0.6, heatMax: 5 },
   pureBlack: { radius: 6, heatRate: 10, heatMin: 3, heatMax: 10 }
 }
 
 const clampValue = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
-// 压缩笔触数据：将对象数组转换为紧凑的数组格式，并保留必要精度
-// [{x,y,r,opacity}, ...] -> [[x,y,r,opacity], ...]
-const compressStrokes = (strokes: HeatPoint[][]): any[][] => {
-  return strokes.map(stroke =>
-    stroke.map(p => [
-      Math.round(p.x * 10) / 10,       // x: 保留1位小数
-      Math.round(p.y * 10) / 10,       // y: 保留1位小数
-      Math.round(p.r),                 // r:取整
-      Math.round(p.opacity * 1000) / 1000 // opacity: 保留3位小数
-    ])
-  )
-}
-
-// 解压笔触数据：兼容旧格式（对象）和新格式（数组）
-const decompressStrokes = (data: any[]): HeatPoint[][] => {
-  if (!data || !Array.isArray(data)) return []
-
-  return data.map((stroke: any[]) => {
-    if (!Array.isArray(stroke)) return []
-    return stroke.map((p: any) => {
-      // 新格式：数组 [x, y, r, opacity]
-      if (Array.isArray(p)) {
-        return {
-          x: p[0],
-          y: p[1],
-          r: p[2],
-          opacity: p[3]
-        }
-      }
-      // 旧格式：对象 {x, y, r, opacity}
-      return p as HeatPoint
-    })
-  })
-}
+// 已移除笔触数据压缩/解压函数 (compressStrokes, decompressStrokes) 因为不再保存 JSON 数据
 
 Page({
 
   data: {
     toolsVisible: false,
-    brushRadius: 40,
-    heatRate: 0.6,
+    brushRadius: 60,
+    heatRate: 3,
     brushRadiusMin: BRUSH_RADIUS_RANGE.min,
     brushRadiusMax: BRUSH_RADIUS_RANGE.max,
     heatRateMin: BRUSH_CONFIG.normal.heatMin,
     heatRateMax: BRUSH_CONFIG.normal.heatMax,
-    canUndo: false,
-    canRedo: false,
+    canUndo: false, // 移除撤回功能
+    canRedo: false, // 移除重做功能
     openid: '',
     snapshotUrl: '',
     qrCodeUrl: '', // 下载链接的二维码图片路径
@@ -88,7 +55,7 @@ Page({
       // 初始化实例变量
       Object.assign(this, {
       strokes: [], // ... existing ...
-        redoStack: [],
+        redoStack: [], // 保留变量定义以兼容现有代码，但不再使用
       currentStroke: [], // ... existing ...
         needsRender: false,
       renderLoopId: 0,
@@ -117,8 +84,6 @@ Page({
     },
   
   onShow() {
-    const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
-    this.setData({ maxUndoSteps })
     this.updateExitConfirmState()
     // 重新加载常驻背景（可能用户在设置页面修改了）
     this.loadPermanentBackground()
@@ -162,87 +127,41 @@ Page({
       }
     },
 
-  // 加载常驻背景
+  // 加载常驻背景 (强制使用 bgeditor.jpg)
   async loadPermanentBackground() {
     try {
-      let selectedBg = wx.getStorageSync('selected_background_editor')
-
-      // 兼容性：如果新键没有值，尝试读取旧键
-      if (!selectedBg) {
-         selectedBg = wx.getStorageSync('selected_background')
-      }
+      // 强制使用默认背景 bgeditor.jpg
+      const path = '/images/bgeditor.jpg'
       
-      // 如果没有缓存，尝试加载默认背景 (bgeditor.*)
-      if (!selectedBg) {
-        const extensions = ['.png', '.jpg', '.jpeg']
-        for (const ext of extensions) {
-           const path = `/images/bgeditor${ext}`
-           try {
-             // 简单的探测，如果getImageInfo成功则认为文件存在
-             const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-               wx.getImageInfo({ 
-                 src: path,
-                 success: resolve,
-                 fail: reject
-               })
-             })
-             
-             selectedBg = {
-               name: `bgeditor${ext}`,
-               tempFilePath: path,
-               aspectRatio: imageInfo.width / imageInfo.height
-             }
-             // 找到一个就停止
-             break; 
-           } catch(e) {
-             // ignore
-           }
-        }
-      }
-
-      if (selectedBg && selectedBg.tempFilePath) {
-        // 如果有保存的常驻背景，加载它
-        this.setData({ 
-          permanentBackgroundImage: selectedBg.tempFilePath 
+      try {
+        const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
+          wx.getImageInfo({ 
+            src: path,
+            success: resolve,
+            fail: reject
+          })
         })
         
-        // 如果有宽高比信息，也保存下来
-        if (selectedBg.aspectRatio) {
-          this.setData({ 
-            permanentBackgroundAspectRatio: selectedBg.aspectRatio 
-          })
-        } else {
-          // 如果没有宽高比信息，尝试获取
-          try {
-            const imageInfo = await new Promise<WechatMiniprogram.GetImageInfoSuccessCallbackResult>((resolve, reject) => {
-              wx.getImageInfo({
-                src: selectedBg.tempFilePath,
-                success: resolve,
-                fail: reject,
-              })
-            })
-            const aspectRatio = imageInfo.width / imageInfo.height
-            this.setData({ permanentBackgroundAspectRatio: aspectRatio })
-            // 更新存储中的宽高比信息（仅当存在缓存记录时）
-            // 注意：如果是我们刚才构造的临时对象，这里可能不需要setStorage，
-            // 但如果用户确实需要记住这个默认状态，可以在bgselect逻辑中更早地固化。
-            // 这里为了安全起见，只更新内存中的状态，或者只更新已存在的 selected_background
-            if (wx.getStorageSync('selected_background')) {
-                wx.setStorageSync('selected_background', {
-                ...selectedBg,
-                aspectRatio
-                })
-            }
-          } catch (err) {
-            console.warn('获取常驻背景图片信息失败', err)
-          }
-        }
-      } else {
-        // 没有常驻背景，清空
         this.setData({ 
-          permanentBackgroundImage: '',
-          permanentBackgroundAspectRatio: undefined
+          permanentBackgroundImage: path,
+          permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
         })
+      } catch(e) {
+        console.warn('默认背景 bgeditor.jpg 加载失败', e)
+        // 尝试加载 png
+        try {
+          const pngPath = '/images/bgeditor.png'
+          const imageInfo = await wx.getImageInfo({ src: pngPath })
+           this.setData({ 
+            permanentBackgroundImage: pngPath,
+            permanentBackgroundAspectRatio: imageInfo.width / imageInfo.height
+          })
+        } catch(err) {
+           this.setData({ 
+            permanentBackgroundImage: '',
+            permanentBackgroundAspectRatio: undefined
+          })
+        }
       }
     } catch (err) {
       console.error('加载常驻背景失败', err)
@@ -479,10 +398,8 @@ Page({
       const self = this as any
       if (self.currentStroke.length > 0) {
         self.strokes.push(self.currentStroke)
-        self.redoStack = []
+        // 移除 undo/redo 相关逻辑
         this.setData({ 
-          canUndo: true,
-        canRedo: false,
         hasUnsavedChanges: true
         })
       this.updateExitConfirmState()
@@ -650,65 +567,14 @@ Page({
       })
     },
 
-    onBrushRadiusChange(e: any) {
-      this.setData({ brushRadius: e.detail.value })
-    },
-  
-    onHeatRateChange(e: any) {
-      this.setData({ heatRate: e.detail.value })
-    },
-
-    onUndo() {
-      const self = this as any
-      if (self.strokes.length === 0) return
-
-    // 检查 undo 栈是否达到了用户设置的最大步数限制
-    if (self.redoStack.length >= this.data.maxUndoSteps) {
-      // 如果 redo 栈满了，可能不再允许 undo 更多进来？通常 undo 限制是指 history slot 的数量。
-      // 这里的实现暂且保留原样，确保 UI 设置是生效并被读取的。
-    }
-
-      const stroke = self.strokes.pop()
-      if (stroke) {
-        self.redoStack.push(stroke)
-        this.setData({ 
-          canUndo: self.strokes.length > 0,
-        canRedo: true,
-        hasUnsavedChanges: true
-        })
-      this.updateExitConfirmState()
-        this.redrawAll()
-        this.toast('已撤回')
-      }
-    },
-
-    onRedo() {
-      const self = this as any
-      if (self.redoStack.length === 0) return
-      const stroke = self.redoStack.pop()
-      if (stroke) {
-        self.strokes.push(stroke)
-        this.setData({ 
-          canUndo: true,
-        canRedo: self.redoStack.length > 0,
-        hasUnsavedChanges: true
-        })
-      this.updateExitConfirmState()
-        for (const p of stroke) {
-          this.drawAlphaPoint(p)
-        }
-        self.needsRender = true
-        this.toast('已重做')
-      }
-    },
+    // 移除 onUndo 和 onRedo 方法
 
     onClear() {
       const self = this as any
       self.strokes = []
       self.redoStack = []
     this.setData({ 
-      canUndo: false, 
-      canRedo: false,
+      // 移除 undo/redo 状态更新
       hasUnsavedChanges: true
     })
     this.updateExitConfirmState()
@@ -785,19 +651,11 @@ Page({
            this.setData({ artworkId: id })
         }
 
-      // 使用 artwork id 作为文件名的一部分，确保多次保存保持一致
-      const compressedData = compressStrokes(self.strokes)
-      const strokesData = JSON.stringify(compressedData)
-      const fs = wx.getFileSystemManager()
-      const pointsPath = `${wx.env.USER_DATA_PATH}/${id}_points.json`
-      fs.writeFileSync(pointsPath, strokesData, 'utf8')
+      // 移除保存 JSON 文件的逻辑 (points.json)
+      // 只保留生成和上传缩略图的功能
 
       const openid = this.data.openid || 'unknown'
-      const { fileID: pointsFileId } = await wx.cloud.uploadFile({
-        cloudPath: `artworks/${openid}/${id}_points.json`,
-        filePath: pointsPath
-      })
-
+      
       // 使用getComposedImagePath生成包含常驻背景和临时背景的合成图
       const composedImagePath = await this.getComposedImagePath()
 
@@ -811,7 +669,7 @@ Page({
           data: {
             action: 'savePoints',
             id,
-            pointsFileId,
+            // pointsFileId: pointsFileId, // 不再保存 pointsFileId
             thumbnailFileId
           }
         })
@@ -848,30 +706,16 @@ Page({
     },
     
     async loadArtwork(id: string) {
-      const self = this as any
-      this.toast('加载中...', 'loading')
+      // 移除读取 JSON 的功能，仅加载基本信息（如果需要）
+      // 如果不再需要 JSON 数据恢复绘画，这里可能只需要确认作品存在
+      if (!id) return
+      
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'editor',
-          data: { action: 'get', id }
-        })
-        // @ts-ignore
-        const data = res.result.data
-        if (data && data.pointsFileId) {
-          const downloadRes = await wx.cloud.downloadFile({ fileID: data.pointsFileId })
-          const fs = wx.getFileSystemManager()
-          const jsonStr = fs.readFileSync(downloadRes.tempFilePath, 'utf8')
-          const rawData = JSON.parse(jsonStr as string)
-          const strokes = decompressStrokes(rawData)
-          
-          self.strokes = strokes
-          this.redrawAll()
-          this.setData({ canUndo: true })
-        }
-        this.toast('加载完成', 'success')
+        /*
+        // 不再下载和解析 points.json
+        */
       } catch (err) {
         console.error(err)
-        this.toast('加载失败', 'error')
       }
     },
 
@@ -928,12 +772,11 @@ Page({
     const originalHeight = self.height * dpr
 
     // 统一使用固定标准尺寸（基于手机参数，确保所有设备生成相同尺寸的图片）
-    // 手机参数：画布尺寸约 956x1274，宽高比约 0.75
-    // 使用固定标准尺寸：1400x1867（宽高比 0.75，接近手机画布比例）
-    const standardWidth = 1400
-    const standardHeight = 1867
+    // 使用固定标准尺寸：810x810（宽高比 1，最大边不超过810）
+    const standardWidth = 810
+    const standardHeight = 810
     
-    console.log('统一图片生成尺寸（固定标准尺寸，基于手机参数）:', {
+    console.log('统一图片生成尺寸（固定标准尺寸，基于手机参数，限制最大810）:', {
       原始尺寸: `${originalWidth}x${originalHeight}`,
       原始宽高比: (originalWidth / originalHeight).toFixed(3),
       标准尺寸: `${standardWidth}x${standardHeight}`,
@@ -1189,12 +1032,19 @@ Page({
   preventScroll() {},
 
   onCloseQrCode() {
-      // 关闭二维码时，我们要把Canvas恢复显示
+      // 关闭二维码时，我们要把Canvas恢复显示，并新建画布
+      const self = this as any
+      self.strokes = []
+      self.redoStack = [] // 兼容性保留
+      
       this.setData({ 
           qrCodeUrl: '',
-          // 如果之前因为显示二维码而隐藏了Canvas，现在恢复它
-          // 注意：如果还有其他弹窗（如工具栏），需根据逻辑判断，目前只处理二维码关闭
-          isCanvasHidden: false 
+          isCanvasHidden: false, 
+          // 新建作品状态
+          artworkId: '',
+          hasUnsavedChanges: false
       })
+      this.updateExitConfirmState()
+      this.redrawAll()
   },
 })

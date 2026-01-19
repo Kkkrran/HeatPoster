@@ -44,12 +44,20 @@ Component({
 
   pageLifetimes: {
     show() {
+      // 保持屏幕常亮
+      wx.setKeepScreenOn({
+        keepScreenOn: true
+      })
       // 页面显示时尝试恢复滚动
       if (this.data.artworks.length > 0 && !this.data.loading) {
         this.resumeAutoScroll()
       }
     },
     hide() {
+      // 关闭屏幕常亮
+      wx.setKeepScreenOn({
+        keepScreenOn: false
+      })
       // 页面隐藏时清理定时器节省资源
       this.clearAllTimers()
     }

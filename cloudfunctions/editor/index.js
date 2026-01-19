@@ -56,7 +56,7 @@ exports.main = async (event, context) => {
 
       case 'savePoints': {
         const id = pickString(event.id)
-        const pointsFileId = pickString(event.pointsFileId)
+        // const pointsFileId = pickString(event.pointsFileId) // 不再保存 pointsFileId
         const thumbnailFileId = pickString(event.thumbnailFileId)
         const exportFileId = pickString(event.exportFileId)
         const width = Number(event.width || 0)
@@ -70,7 +70,7 @@ exports.main = async (event, context) => {
         if (!doc || doc._openid !== OPENID) return { ok: false, error: 'not found' }
 
         const patch = { updatedAt: Date.now() }
-        if (pointsFileId) patch.pointsFileId = pointsFileId
+        // if (pointsFileId) patch.pointsFileId = pointsFileId // 不再更新 pointsFileId
         if (thumbnailFileId) patch.thumbnailFileId = thumbnailFileId
         if (exportFileId) patch.exportFileId = exportFileId
         if (width) patch.width = width
