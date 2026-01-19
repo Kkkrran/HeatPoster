@@ -23,7 +23,7 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   printRotate: 1,      // 旋转角度（1=0度，2=90度），默认1
   printCopies: 1,      // 打印份数（1-99），默认1
   printDensity: 3,     // 浓度（1-9），默认3
-  printSpeed: 30,      // 打印速度（15-60），默认30
+  printSpeed: 15,      // 打印速度（15-60），默认15
   printPaperType: 1,   // 纸张类型（1-间隙，2-普通黑标，3-连续，5-黑标卡纸），默认1
   printGap: 3,         // 纸张间隙（mm，范围0-8），默认3
 }
@@ -330,7 +330,15 @@ export class PrintManager {
         向左偏移: `${leftOffsetMm}mm (${leftOffsetPixels}px)`,
         最终位置: `(${drawX}, ${drawY})`,
         说明: '图片填满画布，向左偏移补偿打印右偏移问题',
-        注意: '预处理为560x800，未交换宽高，确保宽度不超过纸张宽度'
+        注意: '预处理为560x800，未交换宽高，确保宽度不超过纸张宽度',
+        预处理步骤: [
+          '1. 创建离屏Canvas (560x800像素)',
+          '2. 填充白色背景',
+          '3. 加载原始图片',
+          '4. 将图片拉伸填满画布 (可能拉伸变形)',
+          '5. 向左偏移2.5mm补偿打印右偏移',
+          '6. 导出为JPG临时文件'
+        ]
       })
       
       // 绘制图片，填满画布并向左偏移
@@ -610,39 +618,30 @@ export class PrintManager {
         宽高比差异: Math.abs(composedImageInfo.width / composedImageInfo.height - printAspectRatio).toFixed(3)
       })
       
-      // 预处理图片：将图片调整为匹配打印纸张的尺寸和宽高比
-      // 关键发现：从日志看，即使我们交换了宽高预处理为800x560，SDK旋转-90度后仍然是800宽x560高
-      // 这说明SDK的旋转逻辑不是简单的宽高交换，而是保持图片的宽高不变，只是旋转内容
-      // 解决方案：不交换宽高，保持560x800，确保宽度(560)不超过纸张宽度(560)
-      const processedPath = await this.preprocessImageForPrint(
-        composedPath,
-        settings.printWidth,
-        settings.printHeight
-      )
+      // 不再进行图片预处理，直接使用原始图片
+      console.log('跳过图片预处理，直接使用原始图片')
       
-      // 重新获取处理后的图片信息
-      const processedImageInfo = await this.validateImagePath(processedPath)
-      console.log('预处理后图片信息:', {
-        路径: processedPath,
-        宽度: processedImageInfo.width,
-        高度: processedImageInfo.height,
-        宽高比: (processedImageInfo.width / processedImageInfo.height).toFixed(3),
-        期望尺寸: `${Math.round(settings.printWidth * 8)}x${Math.round(settings.printHeight * 8)}`
+      // 使用之前已获取的图片信息
+      console.log('使用原始图片信息:', {
+        路径: composedPath,
+        宽度: composedImageInfo.width,
+        高度: composedImageInfo.height,
+        宽高比: (composedImageInfo.width / composedImageInfo.height).toFixed(3)
       })
       
       // 处理图片URL（如果是本地路径，上传到云存储）
-      let finalImageUrl = processedPath
+      let finalImageUrl = composedPath
       const isNetworkUrl = finalImageUrl.startsWith('http://') || finalImageUrl.startsWith('https://')
       
       if (!isNetworkUrl) {
         const openid = this.page.data.openid || 'unknown'
-        finalImageUrl = await this.uploadImageToCloud(processedPath, openid)
+        finalImageUrl = await this.uploadImageToCloud(composedPath, openid)
       } else {
         console.log('使用网络URL:', finalImageUrl)
       }
       
-      // 构建打印参数（使用处理后的图片信息，ImageWidth 和 ImageHeight 应该等于纸张尺寸）
-      const PageImageObject = this.buildPageImageObject(settings, finalImageUrl, processedImageInfo)
+      // 构建打印参数（使用原始图片信息）
+      const PageImageObject = this.buildPageImageObject(settings, finalImageUrl, composedImageInfo)
       
       this.page.toast('正在打印...', 'loading')
       

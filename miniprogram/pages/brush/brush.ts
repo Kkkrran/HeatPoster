@@ -677,11 +677,11 @@ Page({
   },
 
   // ========== 打印功能 ==========
-  // 点击打印按钮 - 显示参数设置弹窗
+  // 点击打印按钮 - 直接使用默认参数进行打印
   onPrint() {
     const self = this as any
 
-    // 使用打印管理器检查是否可以打印
+    // 使用打印管理器检查是否可以打印（保留连接检测逻辑）
     if (self.printManager) {
       const checkResult = self.printManager.canPrint()
       if (!checkResult.canPrint) {
@@ -705,8 +705,8 @@ Page({
       }
     }
 
-    // 显示打印参数设置弹窗
-    this.setData({ printSettingsVisible: true })
+    // 打印机已连接，直接使用默认参数进行打印（不显示参数设置弹窗）
+    this.onConfirmPrint()
   },
 
   // 关闭打印参数设置弹窗
@@ -783,13 +783,11 @@ Page({
   },
 
   // 确认打印 - 执行实际打印操作（包含保存和上传）
+  // 使用默认打印参数，无需用户设置
   async onConfirmPrint() {
     const self = this as any
-    
-    // 关闭参数设置弹窗
-    this.setData({ printSettingsVisible: false })
 
-    // 在打印前再次验证打印机连接状态
+    // 在打印前再次验证打印机连接状态（保留连接检测逻辑）
     if (self.printManager) {
       const checkResult = self.printManager.canPrint()
       if (!checkResult.canPrint) {
@@ -822,54 +820,37 @@ Page({
       const openid = this.data.openid || 'unknown'
       const id = this.data.artworkId || Date.now().toString()
       
-      // 2. 获取 COS 授权并上传
+      // 2. 上传到微信云存储（保存作品）
       this.toast('正在上传到云存储...', 'loading')
       
-      const authRes = await wx.cloud.callFunction({
-        name: 'cosHelper',
-        data: {
-          fileName: `${id}.jpg`,
-          prefix: `MaoBi/${openid}/` // 使用保存路径
-        }
+      const cloudPath = `MaoBi/${openid}/${id}.jpg`
+      const uploadRes = await wx.cloud.uploadFile({
+        cloudPath: cloudPath,
+        filePath: tempFile as string
       })
-
-      const authData = authRes.result as any
-      if (!authData || !authData.success) {
-        throw new Error(authData?.error || '获取COS授权失败')
-      }
-
-      // 3. 上传到 COS
-      await new Promise((resolve, reject) => {
-        wx.uploadFile({
-          url: authData.uploadUrl,
-          filePath: tempFile as string,
-          name: 'file',
-          formData: authData.formData,
-          success: (res) => {
-            if (res.statusCode === 200 || res.statusCode === 204) {
-              resolve(res)
-            } else {
-              reject(new Error(`上传失败: ${res.statusCode}`))
-            }
-          },
-          fail: reject
+      
+      console.log('图片已上传到云存储，fileID:', uploadRes.fileID)
+      
+      // 3. 获取下载URL（可选，用于后续功能）
+      let imageUrl = ''
+      try {
+        const tempUrlRes = await wx.cloud.getTempFileURL({
+          fileList: [uploadRes.fileID]
         })
-      })
-      
-      // 4. 获取云存储URL
-      const imageUrl = authData.downloadUrl
-      if (!imageUrl) {
-        throw new Error('获取云存储URL失败')
+        if (tempUrlRes.fileList && tempUrlRes.fileList.length > 0 && tempUrlRes.fileList[0].tempFileURL) {
+          imageUrl = tempUrlRes.fileList[0].tempFileURL
+          console.log('图片已上传到云存储，URL:', imageUrl)
+        }
+      } catch (urlErr) {
+        console.warn('获取下载URL失败，但不影响打印:', urlErr)
       }
       
-      console.log('图片已上传到云存储，URL:', imageUrl)
-      
-      // 5. 同时保存到相册（可选，不阻塞打印）
+      // 4. 同时保存到相册（可选，不阻塞打印）
       this.saveToAlbum(tempFile as string).catch(err => {
         console.warn('保存到相册失败', err)
       })
       
-      // 6. 使用本地文件路径进行打印（printManager会进行预处理并上传到print_temp路径）
+      // 5. 使用本地文件路径进行打印（printManager会进行预处理并上传到print_temp路径）
       // 注意：虽然我们已经上传到MaoBi路径保存，但打印需要预处理图片并上传到print_temp路径
       // 所以传入本地文件路径，让printManager进行预处理和上传
       this.toast('正在打印...', 'loading')
