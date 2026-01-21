@@ -19,6 +19,15 @@ Component({
     },
   },
 
+  pageLifetimes: {
+    show() {
+      // 保持屏幕常亮
+      wx.setKeepScreenOn({
+        keepScreenOn: true
+      })
+    }
+  },
+
   methods: {
     onLoad(options: any) {
       if (options && options.target) {

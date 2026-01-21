@@ -26,7 +26,10 @@ Page({
    * 生命周期函数--监听页面显示
    */
   onShow() {
-
+    // 保持屏幕常亮
+    wx.setKeepScreenOn({
+      keepScreenOn: true
+    })
   },
 
   /**

@@ -84,6 +84,10 @@ Page({
     },
   
   onShow() {
+    // 保持屏幕常亮
+    wx.setKeepScreenOn({
+      keepScreenOn: true
+    })
     this.updateExitConfirmState()
     // 重新加载常驻背景（可能用户在设置页面修改了）
     this.loadPermanentBackground()

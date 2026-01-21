@@ -64,6 +64,10 @@ Component({
 
   pageLifetimes: {
     show() {
+      // 保持屏幕常亮
+      wx.setKeepScreenOn({
+        keepScreenOn: true
+      })
       // 每次页面显示时都重新加载所有设置（从背景选择页返回时会更新）
       ;(this as any).refreshAllSettings()
     }

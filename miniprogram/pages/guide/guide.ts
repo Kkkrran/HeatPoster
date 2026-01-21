@@ -1,5 +1,11 @@
 // miniprogram/pages/guide/guide.ts
 Page({
+  onShow() {
+    // 保持屏幕常亮
+    wx.setKeepScreenOn({
+      keepScreenOn: true
+    })
+  },
   goToEditor() {
     wx.navigateTo({
       url: '/pages/editor/editor'

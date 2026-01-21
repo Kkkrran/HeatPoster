@@ -98,6 +98,10 @@ Page({
   },
 
   onShow() {
+    // 保持屏幕常亮
+    wx.setKeepScreenOn({
+      keepScreenOn: true
+    })
     this.loadPermanentBackground()
     // 每次显示页面时同步打印机连接状态（仅在当前会话中）
     // 如果用户在 settings 页面连接了设备，切换到 brush 页面时能看到连接状态

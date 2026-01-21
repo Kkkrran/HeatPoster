@@ -44,6 +44,10 @@ Component({
 
   pageLifetimes: {
     show() {
+      // 保持屏幕常亮
+      wx.setKeepScreenOn({
+        keepScreenOn: true
+      })
       // 页面显示时尝试恢复滚动
       if (this.data.artworks.length > 0 && !this.data.loading) {
         this.resumeAutoScroll()
