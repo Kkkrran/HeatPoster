@@ -24,6 +24,11 @@ App<IAppOption>({
       },
     })
 
+    // 全局保持屏幕常亮
+    wx.setKeepScreenOn({
+      keepScreenOn: true
+    })
+
     if (wx.onBackgroundFetchData) {
       wx.onBackgroundFetchData(() => {})
     }
