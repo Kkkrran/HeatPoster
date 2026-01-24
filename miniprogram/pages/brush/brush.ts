@@ -370,6 +370,41 @@ Page({
       }
   },
 
+  // 生成只有画笔绘制内容的图片（不包含背景图）
+  async getBrushOnlyImage(): Promise<string> {
+    const self = this as any
+    if (!self.canvas) return Promise.reject('Canvas not initialized')
+
+    // 使用固定标准尺寸（与合成图片保持一致）
+    const standardWidth = 810
+    const standardHeight = 1080
+
+    // 创建离屏 Canvas 用于生成只有画笔内容的图片
+    // @ts-ignore
+    const offCanvas = wx.createOffscreenCanvas({ type: '2d', width: standardWidth, height: standardHeight })
+    const offCtx = offCanvas.getContext('2d')
+
+    // 1. 填充白底（画笔内容绘制在白底上）
+    offCtx.fillStyle = '#ffffff'
+    offCtx.fillRect(0, 0, standardWidth, standardHeight)
+
+    // 2. 只绘制当前笔迹（不绘制背景图）
+    offCtx.drawImage(self.canvas, 0, 0, standardWidth, standardHeight)
+
+    // 3. 导出 JPG
+    return new Promise((resolve, reject) => {
+      wx.canvasToTempFilePath({
+        canvas: offCanvas,
+        destWidth: standardWidth,
+        destHeight: standardHeight,
+        fileType: 'jpg',
+        quality: 0.9,
+        success: (res) => resolve(res.tempFilePath),
+        fail: reject
+      })
+    })
+  },
+
 
   
   async toggleTools() {
@@ -818,19 +853,19 @@ Page({
     try {
       this.toast('正在保存并上传...', 'loading')
       
-      // 1. 生成合成图片
-      const tempFile = await this.getComposedImage()
+      // 1. 生成合成图片（用于保存到本地和云端）
+      const composedFile = await this.getComposedImage()
       
       const openid = this.data.openid || 'unknown'
       const id = this.data.artworkId || Date.now().toString()
       
-      // 2. 上传到微信云存储（保存作品）
+      // 2. 上传合成图片到微信云存储（保存作品）
       this.toast('正在上传到云存储...', 'loading')
       
       const cloudPath = `MaoBi/${openid}/${id}.jpg`
       const uploadRes = await wx.cloud.uploadFile({
         cloudPath: cloudPath,
-        filePath: tempFile as string
+        filePath: composedFile as string
       })
       
       console.log('图片已上传到云存储，fileID:', uploadRes.fileID)
@@ -849,17 +884,18 @@ Page({
         console.warn('获取下载URL失败，但不影响打印:', urlErr)
       }
       
-      // 4. 同时保存到相册（可选，不阻塞打印）
-      this.saveToAlbum(tempFile as string).catch(err => {
+      // 4. 同时保存合成图片到相册（可选，不阻塞打印）
+      this.saveToAlbum(composedFile as string).catch(err => {
         console.warn('保存到相册失败', err)
       })
       
-      // 5. 使用本地文件路径进行打印（printManager会进行预处理并上传到print_temp路径）
-      // 注意：虽然我们已经上传到MaoBi路径保存，但打印需要预处理图片并上传到print_temp路径
-      // 所以传入本地文件路径，让printManager进行预处理和上传
+      // 5. 生成只有画笔内容的图片（用于打印，不包含背景）
+      this.toast('正在准备打印...', 'loading')
+      const brushOnlyFile = await this.getBrushOnlyImage()
+      
+      // 6. 使用只有画笔内容的图片进行打印
       this.toast('正在打印...', 'loading')
-      // 传入本地文件路径，printManager会进行预处理并上传到print_temp路径
-      await self.printManager.print(tempFile as string, () => Promise.resolve(tempFile))
+      await self.printManager.print(brushOnlyFile as string, () => Promise.resolve(brushOnlyFile))
       
     } catch (error) {
       console.error('打印失败', error)
