@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "常驻背景选择",
+  "pageOrientation": "portrait",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
     "t-empty": "tdesign-miniprogram/empty/empty"
