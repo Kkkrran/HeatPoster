@@ -23,7 +23,7 @@ Component({
   data: {
     exitConfirm: false,
     maxUndoSteps: 10,
-    albumScrollSpeed: 100,
+    albumScrollSpeed: 5,
     pureBlackBrush: false,
     limitDialogVisible: false,
     tempLimitValue: '',
@@ -44,7 +44,7 @@ Component({
       if (exitConfirm === '') exitConfirm = false // 默认为关闭
       
       const maxUndoSteps = wx.getStorageSync(STORAGE_KEYS.MAX_UNDO) || 10
-      const albumScrollSpeed = wx.getStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED) || 100
+      const albumScrollSpeed = wx.getStorageSync(STORAGE_KEYS.ALBUM_SCROLL_SPEED) || 5
       
       const pureBlackBrush = !!wx.getStorageSync(STORAGE_KEYS.PURE_BLACK_BRUSH)
       
@@ -118,8 +118,8 @@ Component({
     onSpeedConfirm() {
       const self = this as any
       const val = parseInt(self.data.tempSpeedValue, 10)
-      if (isNaN(val) || val < 10 || val > 999) {
-        wx.showToast({ title: '请输入10-999间的数字', icon: 'none' })
+      if (isNaN(val) || val < 1 || val > 999) {
+        wx.showToast({ title: '请输入1-999间的数字', icon: 'none' })
         return
       }
       self.setData({

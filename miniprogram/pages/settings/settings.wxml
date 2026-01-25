@@ -6,7 +6,7 @@
   
   <view class="section">
     <t-cell-group>
-      <t-cell title="相册自动滚动速度" description="数值越小越慢(10-999)" note="{{albumScrollSpeed}}" bindtap="onEditScrollSpeed" arrow />
+      <t-cell title="相册自动滚动速度" description="数值越小越慢(1-999)" note="{{albumScrollSpeed}}" bindtap="onEditScrollSpeed" arrow />
 <!--
       <t-cell title="纯黑画笔" description="开启后画笔颜色固定为黑色">
         <t-switch slot="note" value="{{pureBlackBrush}}" bind:change="onPureBlackBrushChange" />
@@ -113,7 +113,7 @@
       borderless
       class="dialog-input"
       clearable
-      placeholder="请输入数字(10-999)"
+      placeholder="请输入数字(1-999)"
       value="{{tempSpeedValue}}"
       type="number"
       bind:change="onSpeedInputChange"
