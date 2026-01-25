@@ -292,6 +292,14 @@ page {
   --td-slider-dot-size: 81rpx;
 }
 
+.slider-vertical-box {
+  height: 420rpx;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 10rpx;
+  --td-slider-dot-size: 81rpx;
+}
+
 /* 打印参数设置弹窗样式 */
 .print-settings-content {
   max-height: 60vh;

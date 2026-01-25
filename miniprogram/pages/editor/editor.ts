@@ -17,7 +17,7 @@ interface HeatPoint {
 
 const BRUSH_RADIUS_RANGE = { min: 10, max: 120 }
 const BRUSH_CONFIG = {
-  normal: { radius: 60, heatRate: 3, heatMin: 0.6, heatMax: 5 },
+  normal: { radius: 60, heatRate: 3, heatMin: 0.5, heatMax: 4 },
   pureBlack: { radius: 6, heatRate: 10, heatMin: 3, heatMax: 10 }
 }
 
@@ -1169,4 +1169,15 @@ Page({
       console.error('Save history failed:', e)
     }
   },
+
+  // 工具面板相关的事件处理
+    onBrushRadiusChange(e: any) {
+      const { value } = e.detail
+      this.setData({ brushRadius: value })
+    },
+
+    onHeatRateChange(e: any) {
+      const { value } = e.detail
+      this.setData({ heatRate: value })
+    },
 })
