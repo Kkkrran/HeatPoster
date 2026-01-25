@@ -35,8 +35,8 @@ Page({
     brushRadiusMax: BRUSH_RADIUS_RANGE.max,
     heatRateMin: BRUSH_CONFIG.normal.heatMin,
     heatRateMax: BRUSH_CONFIG.normal.heatMax,
-    canUndo: false, // 移除撤回功能
-    canRedo: false, // 移除重做功能
+    canUndo: false, // 恢复功能支持
+    canRedo: false, // 恢复功能支持
     openid: '',
     snapshotUrl: '',
     qrCodeUrl: '', // 下载链接的二维码图片路径
@@ -45,9 +45,14 @@ Page({
     permanentBackgroundAspectRatio: undefined as number | undefined, // 常驻背景的宽高比
     canvasContainerStyle: '', // canvas容器的动态样式
     artworkId: '',
+    
+    // 历史记录
+    historyIndex: -1,
+    maxUndoSteps: 10,
+    // 撤销栈 - 直接保存 ImageData
+    undoStack: [] as ImageData[],
 
     hasUnsavedChanges: false,
-    maxUndoSteps: 10,
     pureBlackBrush: false,
   },
 
@@ -55,11 +60,16 @@ Page({
       // 初始化实例变量
       Object.assign(this, {
       strokes: [], // ... existing ...
-        redoStack: [], // 保留变量定义以兼容现有代码，但不再使用
+        redoStack: [], // 保留但可能使用不同方式实现
+        undoStack: [], // JS 端的撤销栈
       currentStroke: [], // ... existing ...
         needsRender: false,
       renderLoopId: 0,
     })
+    
+    // 读取最大撤销步数
+    const maxUndoSteps = wx.getStorageSync('editor_max_undo_steps') || 10
+    this.setData({ maxUndoSteps })
     // 先加载常驻背景，然后再初始化画布（这样可以根据常驻背景的比例调整画布）
     await this.loadPermanentBackground()
     // 等待画布初始化完成
@@ -232,14 +242,17 @@ Page({
 
           // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
           let canvasContainerStyle = ''
+          let targetWidth = 0
+          let targetHeight = 0
+          
           if (this.data.permanentBackgroundAspectRatio) {
             const aspectRatio = this.data.permanentBackgroundAspectRatio
             const maxWidth = wrapInfo.width - 48 // 减去左右padding (24rpx * 2)
             const maxHeight = wrapInfo.height - 24 // 减去底部padding
             
             // 计算适合的尺寸（保持比例，尽量填满容器）
-            let targetWidth = maxHeight * aspectRatio
-            let targetHeight = maxHeight
+            targetWidth = maxHeight * aspectRatio
+            targetHeight = maxHeight
             
             // 如果宽度超出容器，则按宽度缩放
             if (targetWidth > maxWidth) {
@@ -258,76 +271,57 @@ Page({
 
           this.setData({ canvasContainerStyle })
 
-          // 查询canvas元素
-          const canvasQuery = this.createSelectorQuery()
-          canvasQuery.select('#paintCanvas')
-        .fields({ node: true, size: true })
-        .exec((res) => {
-              if (!res[0] || !res[0].node) {
-                resolve()
-                return
-              }
-          const canvas = res[0].node
-          const ctx = canvas.getContext('2d')
-          // @ts-ignore
-          const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
+          // 如果有样式变更，需要等待视图更新
+          const delay = canvasContainerStyle ? 100 : 0
           
-          const self = this as any
-          self.canvas = canvas
-          self.ctx = ctx
-          self.dpr = dpr
-              
-              // 如果设置了容器样式，需要等待下一帧再获取实际尺寸
-              if (canvasContainerStyle) {
+          setTimeout(() => {
+            // 查询canvas元素
+            const canvasQuery = this.createSelectorQuery()
+            canvasQuery.select('#paintCanvas')
+              .fields({ node: true, size: true })
+              .exec((res) => {
+                if (!res[0] || !res[0].node) {
+                  resolve()
+                  return
+                }
+                const canvas = res[0].node
+                const ctx = canvas.getContext('2d')
+                // @ts-ignore
+                const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio
+                
+                const self = this as any
+                self.canvas = canvas
+                self.ctx = ctx
+                self.dpr = dpr
+                
+                // 使用查询到的实际大小
+                const rect = res[0]
+                self.width = rect.width
+                self.height = rect.height
+
+                canvas.width = rect.width * dpr
+                canvas.height = rect.height * dpr
+                // ctx.scale(dpr, dpr) // 之前注释掉了scale，手动乘 dpr
+
+                // 初始化离屏 Canvas
+                // @ts-ignore
+                self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
+                self.memCtx = self.memCanvas.getContext('2d')
+
+                this.initPalette()
+                this.startRenderLoop()
+                
+                // 初始化历史记录（保存初始空白状态）
                 setTimeout(() => {
-                  const sizeQuery = this.createSelectorQuery()
-                  sizeQuery.select('#paintCanvas')
-                    .boundingClientRect()
-                    .exec((sizeRes) => {
-                      if (!sizeRes[0]) {
-                        resolve()
-                        return
-                      }
-                      const rect = sizeRes[0]
-                      self.width = rect.width
-                      self.height = rect.height
-
-                      canvas.width = rect.width * dpr
-                      canvas.height = rect.height * dpr
-                      ctx.scale(dpr, dpr)
-
-                      // 初始化离屏 Canvas
-                      // @ts-ignore
-                      self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
-                      self.memCtx = self.memCanvas.getContext('2d')
-
-                      this.initPalette()
-                      this.startRenderLoop()
-                      resolve()
-                    })
-                }, 100)
-              } else {
-                // 没有设置容器样式，使用默认尺寸
-          self.width = res[0].width
-          self.height = res[0].height
-
-          canvas.width = res[0].width * dpr
-          canvas.height = res[0].height * dpr
-          ctx.scale(dpr, dpr)
-
-          // 初始化离屏 Canvas
-          // @ts-ignore
-          self.memCanvas = wx.createOffscreenCanvas({ type: '2d', width: canvas.width, height: canvas.height })
-          self.memCtx = self.memCanvas.getContext('2d')
-
-          this.initPalette()
-          this.startRenderLoop()
+                    this.saveHistoryState()
+                }, 50)
+                
                 resolve()
-              }
-            })
-        })
-        })
-    },
+              })
+          }, delay)
+    })
+    })
+  },
 
     initPalette() {
       // @ts-ignore
@@ -402,11 +396,13 @@ Page({
       const self = this as any
       if (self.currentStroke.length > 0) {
         self.strokes.push(self.currentStroke)
-        // 移除 undo/redo 相关逻辑
-        this.setData({ 
-        hasUnsavedChanges: true
-        })
-      this.updateExitConfirmState()
+
+        // 每次落笔结束，保存当前状态到历史记录
+        // 等待一帧，确保最后的渲染已经完成
+        setTimeout(() => {
+          this.saveHistoryState()
+        }, 16)
+        
         self.currentStroke = []
       }
     },
@@ -575,14 +571,38 @@ Page({
 
     onClear() {
       const self = this as any
+      // 清空笔画
       self.strokes = []
-      self.redoStack = []
-    this.setData({ 
-      // 移除 undo/redo 状态更新
-      hasUnsavedChanges: true
-    })
-    this.updateExitConfirmState()
-      this.redrawAll()
+      
+      // 1. 清除画布 (Ctx 和 MemCtx 都要清除)
+      if (self.memCtx && self.ctx) {
+        const w = self.memCanvas.width
+        const h = self.memCanvas.height
+        self.memCtx.clearRect(0, 0, w, h)
+        self.ctx.clearRect(0, 0, w, h)
+      }
+      
+      // 2. 重置撤销栈
+      const stack = (this as any).undoStack
+      // 清空数组
+      stack.length = 0
+      // 重置索引
+      this.setData({
+          historyIndex: -1, 
+          canUndo: false,
+          canRedo: false
+      })
+      
+      // 3. 保存这个"空白"状态作为初始状态
+      setTimeout(() => {
+          this.saveHistoryState()
+      }, 16)
+
+      // 更新状态
+      this.setData({
+        hasUnsavedChanges: true
+      })
+      this.updateExitConfirmState()
       this.toast('画布已清空')
     },
 
@@ -1050,5 +1070,103 @@ Page({
       })
       this.updateExitConfirmState()
       this.redrawAll()
+  },
+
+  // 实现撤销功能
+  onUndo() {
+    const stack = (this as any).undoStack
+    const index = this.data.historyIndex
+    
+    if (index > 0) {
+      const newIndex = index - 1
+      const imageData = stack[newIndex]
+      const self = this as any
+      // 这里应该恢复 memCtx (数据源)，而不是 ctx (显示层)
+      // 因为后续的绘画是基于 memCtx 的
+      if (self.memCtx && imageData) {
+        self.memCtx.putImageData(imageData, 0, 0)
+        // 立即更新显示层
+        this.render()
+        
+        this.setData({
+          historyIndex: newIndex,
+          canUndo: newIndex > 0,
+          canRedo: true
+        })
+      }
+    }
+  },
+
+  // 实现重做功能
+  onRedo() {
+    const stack = (this as any).undoStack
+    const index = this.data.historyIndex
+    
+    if (index < stack.length - 1) {
+      const newIndex = index + 1
+      const imageData = stack[newIndex]
+      const self = this as any
+      // 同样恢复 memCtx
+      if (self.memCtx && imageData) {
+        self.memCtx.putImageData(imageData, 0, 0)
+        // 立即更新显示层
+        this.render()
+        
+        this.setData({
+          historyIndex: newIndex,
+          canUndo: true,
+          canRedo: newIndex < stack.length - 1
+        })
+      }
+    }
+  },
+
+  // 保存当前画布状态到历史记录
+  saveHistoryState() {
+    const self = this as any
+    // 我们保存 memCtx 的状态，这是热力图的原始数据
+    if (!self.memCtx) return
+
+    try {
+      // 获取当前 memCanvas 图像数据
+      const w = self.memCanvas.width
+      const h = self.memCanvas.height
+      const imageData = self.memCtx.getImageData(0, 0, w, h)
+      
+      const stack = (this as any).undoStack
+      let index = this.data.historyIndex
+
+      // 如果当前不是在最新历史记录上操作（即做过撤销），则删除后续记录
+      if (index < stack.length - 1) {
+        stack.splice(index + 1)
+      }
+      
+      // 添加新记录
+      stack.push(imageData)
+      
+      // 限制步数
+      const maxSteps = this.data.maxUndoSteps
+      if (stack.length > maxSteps + 1) {
+        stack.shift()
+      } else {
+        index = stack.length - 1
+      }
+      
+      // 更新状态
+      this.setData({
+        historyIndex: stack.length - 1,
+        canUndo: stack.length > 1,
+        canRedo: false
+      })
+      
+      // 更新 hasUnsavedChanges
+      if (!this.data.hasUnsavedChanges) {
+          this.setData({ hasUnsavedChanges: true })
+          this.updateExitConfirmState()
+      }
+
+    } catch (e) {
+      console.error('Save history failed:', e)
+    }
   },
 })

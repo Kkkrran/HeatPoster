@@ -3,7 +3,8 @@
   <!-- 顶部操作栏 -->
   <view class="top-bar">
     <view class="top-left">
-      <!-- 移除撤回和重做按钮 -->
+      <view class="circle-btn {{!canUndo ? 'disabled' : ''}}" bindtap="onUndo">撤销</view>
+      <view class="circle-btn {{!canRedo ? 'disabled' : ''}}" bindtap="onRedo">重做</view>
     </view>
 
     <view class="circle-btn danger" bindtap="onClear">清空画布</view>
