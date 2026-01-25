@@ -50,7 +50,7 @@ Page({
     historyIndex: -1,
     maxUndoSteps: 10,
     // 撤销栈 - 直接保存 ImageData
-    undoStack: [] as ImageData[],
+    undoStack: [] as any[],
 
     hasUnsavedChanges: false,
     pureBlackBrush: false,
