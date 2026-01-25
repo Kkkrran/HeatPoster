@@ -24,6 +24,13 @@ Component({
     height: 0,
     scrollTop: 0,
     contentOpacity: 1,
+    scrollState: {
+      running: false,
+      speed: 5,
+      maxScroll: 0,
+      initialScrollTop: 0
+    },
+    clearTransformTrigger: false
   },
 
   lifetimes: {
@@ -54,7 +61,10 @@ Component({
       }
     },
     hide() {
-      // 页面隐藏时清理定时器节省资源
+      // 页面隐藏时，停止滚动
+      this.setData({
+        scrollState: { ...this.data.scrollState, running: false }
+      })
       this.clearAllTimers()
     }
   },
@@ -257,9 +267,36 @@ Component({
       }
     },
 
-    onScrollTouch() {
-      console.log('用户触摸，停止自动滚动')
+    // WXS 回调：自动滚动结束
+    onAutoScrollFinish() {
+      this.handleScrollFinish()
+    },
+
+    // WXS 回调：用户打断滚动
+    onScrollInterrupted(e: any) {
+      // callMethod 传递的参数直接就是对象，不是 event.detail
+      const currentScrollTop = e.scrollTop !== undefined ? e.scrollTop : (e.detail && e.detail.scrollTop)
+      console.log('用户触摸，停止自动滚动，当前位置:', currentScrollTop)
       this.clearAllTimers()
+
+      // 同步位置: 设置原生 scrollTop, 并触发清除 WXS transform
+      this.setData({
+        scrollTop: currentScrollTop,
+        scrollState: { ...this.data.scrollState, running: false },
+        clearTransformTrigger: true
+      }, () => {
+        // 重置 trigger 以便下次使用
+        this.setData({ clearTransformTrigger: false })
+      })
+    },
+
+    onScrollTouch() {
+      // 仅用于原生滚动时的触发，WXS touchStart 处理了自动滚动时的触摸
+      console.log('用户触摸 (Native)')
+      this.clearAllTimers()
+      this.setData({
+        scrollState: { ...this.data.scrollState, running: false }
+      })
     },
 
     onScrollTouchEnd() {
@@ -276,18 +313,21 @@ Component({
         .scrollOffset((res) => {
           if (res) {
             console.log('恢复自动滚动，当前位置:', res.scrollTop)
-            this.setData({ scrollTop: res.scrollTop }, () => {
-              this.startAutoScroll(false)
-            })
+            this.startAutoScroll(false, res.scrollTop)
           }
         })
         .exec()
     },
 
-    startAutoScroll(restart = false) {
+    startAutoScroll(restart = false, startTop = 0) {
       this.clearAllTimers()
+      
+      this.setData({
+        scrollState: { ...this.data.scrollState, running: false },
+        clearTransformTrigger: true // 确保开始前没有残留 transform
+      })
 
-      // 延迟确保渲染完成
+      // 延迟确保渲染和状态重置完成
       // @ts-ignore
       this._startScrollTimeout = setTimeout(() => {
         this.createSelectorQuery()
@@ -304,9 +344,12 @@ Component({
 
             if (maxScroll <= 0) return
 
-            console.log('开始自动滚动，最大滚动距离:', maxScroll)
+            console.log('开始自动滚动 (WXS)，最大滚动距离:', maxScroll)
             
-            let currentTop = this.data.scrollTop || 0
+            let currentTop = startTop
+            if (this.data.scrollTop > 0 && !restart) {
+                currentTop = this.data.scrollTop
+            }
 
             // 如果是重新开始（比如刷新后），强制归零
             if (restart) {
@@ -314,40 +357,24 @@ Component({
               this.setData({ scrollTop: 0 })
             }
 
-            let lastTime = Date.now()
-            // 读取用户设置的速度，默认为100
-            const speed = wx.getStorageSync('album_scroll_speed') || 100 
+            const speed = wx.getStorageSync('album_scroll_speed') || 5 
 
-            // @ts-ignore
-            this._scrollTimer = setInterval(() => {
-              const now = Date.now()
-              const dt = (now - lastTime) / 1000 // 转换为秒
-              lastTime = now
-
-              if (currentTop >= maxScroll) {
-                // @ts-ignore
-                clearInterval(this._scrollTimer)
-                // @ts-ignore
-                this._scrollTimer = null
-                this.handleScrollFinish()
-                return
-              }
-              
-              // 使用基于时间的步长计算，保证不同帧率下的速度一致性
-              // 提高刷新频率到 ~30fps (33ms)，消除卡顿感
-              const step = speed * dt
-              currentTop += step
-
-              this.setData({
-                scrollTop: currentTop
-              })
-            }, 33)
+            // 启动 WXS 滚动
+            this.setData({
+                scrollState: {
+                    running: true,
+                    speed: speed,
+                    maxScroll: maxScroll,
+                    initialScrollTop: currentTop
+                }
+            })
           })
-      }, 1000)
+      }, 500)
     },
 
     handleScrollFinish() {
       console.log('滚动到底部，等待刷新...')
+      this.setData({ scrollState: { ...this.data.scrollState, running: false } }) // 确保 WXS 状态停止
 
       // @ts-ignore
       this._finishTimer1 = setTimeout(() => {
@@ -374,6 +401,7 @@ Component({
         // @ts-ignore
         this._scrollTimer = null
       }
+      // WXS 模式下主要靠 state 控制停止，但也清理其他 timer
       
       // @ts-ignore
       if (this._startScrollTimeout) {

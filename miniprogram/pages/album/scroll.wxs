@@ -1,0 +1,74 @@
+var scrollTop = 0;
+var scrolling = false;
+var lastTime = 0;
+var speed = 5;
+
+function startScroll(newValue, oldValue, ownerInstance, instance) {
+    if (newValue && newValue.running) {
+        if (!scrolling) {
+            scrolling = true;
+            scrollTop = newValue.initialScrollTop || 0; 
+            speed = newValue.speed || 5;
+            lastTime = Date.now();
+            
+            var contentInstance = ownerInstance.selectComponent('.grid'); 
+            
+            function frame() {
+                if (!scrolling) return;
+                
+                var now = Date.now();
+                var dt = (now - lastTime) / 1000;
+                lastTime = now;
+                
+                if (dt > 0.1) dt = 0.1; // Cap dt at 100ms/frame to skip huge jumps
+
+                var step = speed * dt;
+                
+                // 确保 step 是合理的数值
+                if (step < 0) step = 0;
+                
+                scrollTop += step;
+
+                if (newValue.maxScroll && scrollTop >= newValue.maxScroll) {
+                    scrolling = false;
+                    ownerInstance.callMethod('onAutoScrollFinish');
+                    return;
+                }
+                
+                if (contentInstance) {
+                    contentInstance.setStyle({
+                        transform: 'translateY(-' + scrollTop + 'px) translateZ(0)'
+                    });
+                }
+                ownerInstance.requestAnimationFrame(frame);
+            }
+            
+            ownerInstance.requestAnimationFrame(frame);
+        }
+    } else {
+        scrolling = false;
+    }
+}
+
+function touchStart(event, ownerInstance) {
+    if (scrolling) {
+        scrolling = false;
+        // User touched, stop custom scrolling and sync position
+        ownerInstance.callMethod('onScrollInterrupted', { scrollTop: scrollTop });
+    }
+}
+
+function clearTransformObserver(newValue, oldValue, ownerInstance, instance) {
+    if (newValue) {
+        var contentInstance = ownerInstance.selectComponent('.grid');
+        if (contentInstance) {
+            contentInstance.setStyle({ transform: '' });
+        }
+    }
+}
+
+module.exports = {
+    startScroll: startScroll,
+    touchStart: touchStart,
+    clearTransformObserver: clearTransformObserver
+}
