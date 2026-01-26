@@ -173,17 +173,20 @@ Page({
       if (this.data.permanentBackgroundAspectRatio) {
         const aspectRatio = this.data.permanentBackgroundAspectRatio
 
-        const maxWidth = wrapInfo.width - 48 // 减去左右padding
-        const maxHeight = wrapInfo.height - 24 // 减去底部padding
+        const maxWidth = wrapInfo.width
+        const maxHeight = wrapInfo.height
 
         // 计算适合的尺寸（保持比例，尽量填满容器）
-        let targetWidth = maxHeight * aspectRatio
-        let targetHeight = maxHeight
+        let targetWidth, targetHeight;
         
-        // 如果宽度超出容器，则按宽度缩放
-        if (targetWidth > maxWidth) {
+        if (maxWidth / maxHeight < aspectRatio) {
+          // 宽度受限
           targetWidth = maxWidth
           targetHeight = maxWidth / aspectRatio
+        } else {
+          // 高度受限
+          targetHeight = maxHeight
+          targetWidth = targetHeight * aspectRatio
         }
         
         // 设置canvas容器的样式（使用rpx单位）
@@ -192,7 +195,7 @@ Page({
         const rpxRatio = systemInfo.windowWidth / 750
         const targetWidthRpx = targetWidth / rpxRatio
         const targetHeightRpx = targetHeight / rpxRatio
-        canvasContainerStyle = `width: ${targetWidthRpx}rpx; height: ${targetHeightRpx}rpx; margin: 0 auto;`
+        canvasContainerStyle = `width: ${targetWidthRpx}rpx; height: ${targetHeightRpx}rpx;`
       }
       
       this.setData({ canvasContainerStyle }, () => {

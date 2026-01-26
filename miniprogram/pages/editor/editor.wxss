@@ -7,15 +7,17 @@ page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  width: 88%;
+  width: 85%;
   margin: 0 auto;
 }
 
 .canvas-wrap {
   flex: 1;
   position: relative;
-  padding: 0 24rpx 24rpx;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-container {
