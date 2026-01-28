@@ -2,8 +2,12 @@
   <!-- 顶部操作栏 -->
   <view class="top-bar">
     <view class="top-left">
-      <view class="circle-btn {{!canUndo ? 'disabled' : ''}}" bindtap="onUndo">撤销</view>
-      <view class="circle-btn {{!canRedo ? 'disabled' : ''}}" bindtap="onRedo">重做</view>
+      <view class="circle-btn {{!canUndo ? 'disabled' : ''}}" bindtap="onUndo">
+        <image class="btn-icon" src="../../images/undo.svg" mode="aspectFit"></image>
+      </view>
+      <view class="circle-btn {{!canRedo ? 'disabled' : ''}}" bindtap="onRedo">
+        <image class="btn-icon" src="../../images/redo.svg" mode="aspectFit"></image>
+      </view>
     </view>
 
     <view class="circle-btn" bindtap="toggleTools">调节</view>

@@ -79,7 +79,7 @@ Page({
     await this.getOpenId()
     await this.loadPermanentBackground()
     // Wait for view to stabilize?
-    this.initCanvas()
+    // this.initCanvas() // 由 loadPermanentBackground 内部调用，无需重复调用
     
     // 初始化打印相关
     // @ts-ignore
@@ -233,6 +233,8 @@ Page({
             this.drawBackground()
             
             // Ensure first history state is saved
+            this.history = [] // 初始化/重置画布时，清空历史记录
+            this.historyIndex = -1
             this.saveHistory()
 
             // Load Brush
@@ -556,6 +558,9 @@ Page({
   
   onClear() {
       this.drawBackground()
+      // 清空画布被视为新的开始，重置历史记录
+      this.history = []
+      this.historyIndex = -1
       this.saveHistory()
       this.toast('已清空')
       this.toggleTools()

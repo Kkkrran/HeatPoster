@@ -390,3 +390,16 @@ page {
 .footer-buttons t-button {
   flex: 1;
 }
+
+/* 定制左侧撤销重做按钮为圆形图标按钮 */
+.top-left .circle-btn {
+  padding: 0;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+}
+
+.btn-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
