@@ -11,7 +11,7 @@
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "热力图绘画",
+    "navigationBarTitleText": "",
     "navigationBarBackgroundColor": "#ffffff"
   },
   "permission": {

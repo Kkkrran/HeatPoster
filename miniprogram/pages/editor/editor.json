@@ -1,5 +1,4 @@
 {
-  "navigationBarTitleText": "绘画",
   "pageOrientation": "portrait",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
