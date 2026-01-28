@@ -121,7 +121,7 @@ page {
 }
 
 .rect-btn.primary {
-  background: #0052d9;
+  background: #000000;
   color: #ffffff;
 }
 
@@ -195,6 +195,10 @@ page {
   align-items: center;
   justify-content: space-between;
   padding: 0 32rpx 16rpx;
+  --td-button-danger-bg-color: #000000;
+  --td-button-danger-border-color: #000000;
+  --td-button-danger-active-bg-color: #333333;
+  --td-button-danger-active-border-color: #333333;
 }
 
 .sheet-title {
@@ -240,7 +244,7 @@ page {
 .slider-header .value {
   font-size: 26rpx;
   font-weight: 500;
-  color: #0052d9;
+  color: #000000;
 }
 
 .slider-vertical-box {
@@ -249,6 +253,8 @@ page {
   justify-content: center;
   padding-bottom: 10rpx;
   --td-slider-dot-size: 81rpx;
+  --td-slider-active-color: #000000;
+  --td-brand-color: #000000;
 }
 
 /* 打印参数设置弹窗样式 */
@@ -290,6 +296,8 @@ page {
   display: flex;
   align-items: center;
   gap: 16rpx;
+  --td-slider-active-color: #000000;
+  --td-brand-color: #000000;
 }
 
 .slider-horizontal-box t-slider {
@@ -299,7 +307,7 @@ page {
 .slider-value {
   font-size: 26rpx;
   font-weight: 600;
-  color: #0052d9;
+  color: #000000;
   min-width: 60rpx;
   text-align: right;
 }
@@ -319,9 +327,9 @@ page {
 
 .rotate-option.active,
 .paper-type-option.active {
-  background: #0052d9;
+  background: #000000;
   color: #ffffff;
-  border-color: #0052d9;
+  border-color: #000000;
 }
 
 .popup-footer {

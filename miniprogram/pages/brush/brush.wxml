@@ -249,7 +249,7 @@
       <view class="popup-footer">
         <view class="footer-buttons">
           <t-button theme="default" variant="outline" block bindtap="onClosePrintSettings" style="margin-right: 16rpx;">取消</t-button>
-          <t-button theme="primary" block bindtap="onConfirmPrint">确认打印</t-button>
+          <t-button theme="default" block bindtap="onConfirmPrint">确认打印</t-button>
         </view>
       </view>
     </view>

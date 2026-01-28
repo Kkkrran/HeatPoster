@@ -5,32 +5,38 @@
   justify-content: center;
   height: 100vh;
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: #f3f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
 }
 
 .title {
-  font-size: 24px;
-  margin-bottom: 40px;
-  color: #333;
+  font-size: 48rpx;
+  margin-bottom: 80rpx;
+  color: #1f2329;
+  font-weight: 700;
 }
 
 .button-group {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 40rpx;
 }
 
 .mode-btn {
-  width: 200px;
-  height: 60px;
-  font-size: 21px;
+  width: 400rpx;
+  height: 100rpx;
+  font-size: 32rpx;
+  font-weight: 600;
   background-color: #1f2329;
   color: white;
   border: none;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mode-btn:active {
-  background-color: #000000;
+  background-color: #1f2329;
 }
