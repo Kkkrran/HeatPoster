@@ -9,7 +9,14 @@
     <view class="circle-btn" bindtap="toggleTools">工具</view>
 
     <view class="top-right">
-      <view class="rect-btn primary" bindtap="onPrint">完成</view>
+      <view class="rect-btn primary" bindtap="onPrint" style="position: relative;">
+        完成
+        <!-- 二维码浮层 -->
+        <view class="qrcode-popup" wx:if="{{qrCodeUrl}}" catchtap="preventBubble">
+          <image class="qrcode-img" src="{{qrCodeUrl}}" show-menu-by-longpress mode="aspectFit"/>
+          <view class="qrcode-tip">微信扫码，再浏览器打开，下载本作品</view>
+        </view>
+      </view>
     </view>
   </view>
 
@@ -42,6 +49,9 @@
       ></image>
     </view>
   </view>
+  
+  <!-- 添加隐藏的Canvas用于生成二维码 -->
+  <canvas type="2d" id="qrCodeCanvas" style="position: fixed; left: -9999px; width: 300px; height: 300px;"></canvas>
 
   <t-popup visible="{{toolsVisible}}" placement="bottom" bind:visible-change="onToolsVisibleChange">
     <view class="sheet">
@@ -240,6 +250,9 @@
       </view>
     </view>
   </t-popup>
+
+  <!-- 全局点击遮罩，用于点击空白处关闭二维码 -->
+  <view class="mask" wx:if="{{qrCodeUrl}}" bindtap="onCloseQrCode" catchtouchmove="preventScroll"></view>
 
   <t-toast id="t-toast" />
 </view>
