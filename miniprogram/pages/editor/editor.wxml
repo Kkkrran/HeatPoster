@@ -11,7 +11,7 @@
 
     <view class="top-right">
       <view class="rect-btn primary" bindtap="onSave" style="position: relative;">
-        保存
+        完成
         <!-- 二维码浮层 -->
         <view class="qrcode-popup" wx:if="{{qrCodeUrl}}" catchtap="preventBubble">
           <image class="qrcode-img" src="{{qrCodeUrl}}" show-menu-by-longpress mode="aspectFit"/>

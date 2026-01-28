@@ -702,8 +702,16 @@ Page({
   onCloseQrCode() {
       this.setData({ 
           qrCodeUrl: '',
-          isCanvasHidden: false,
-          artworkId: `practice_${Date.now()}`
+          isCanvasHidden: false
+      })
+      
+      this.resetCanvas()
+  },
+
+  // 重置画布，开始新作品
+  resetCanvas() {
+      this.setData({
+        artworkId: `practice_${Date.now()}`
       })
       
       // 完全重置画布和历史
@@ -904,6 +912,9 @@ Page({
       if (uploadRes.fileID) {
         this.showDownloadQrCode(uploadRes.fileID)
       }
+      
+      // 8. 走完流程后自动新建新作品
+      this.resetCanvas()
       
     } catch (error) {
       console.error('打印失败', error)
