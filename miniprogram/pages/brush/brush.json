@@ -6,7 +6,6 @@
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-toast": "tdesign-miniprogram/toast/toast"
   },
-  "navigationBarTitleText": "毛笔练习",
   "pageOrientation": "portrait",
   "disableScroll": true
 }

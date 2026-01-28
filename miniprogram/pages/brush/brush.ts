@@ -899,6 +899,11 @@ Page({
       // 6. 使用只有画笔内容的图片进行打印
       this.toast('正在打印...', 'loading')
       await self.printManager.print(brushOnlyFile as string, () => Promise.resolve(brushOnlyFile))
+
+      // 7. 显示二维码
+      if (uploadRes.fileID) {
+        this.showDownloadQrCode(uploadRes.fileID)
+      }
       
     } catch (error) {
       console.error('打印失败', error)
