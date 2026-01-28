@@ -923,8 +923,8 @@ Page({
       
     } catch (error) {
       console.error('打印失败', error)
-      this.toast('打印失败', 'error')
-      // 错误已在 printManager 中处理
+      // 错误已在 printManager 中处理，不再显示通用错误消息
+      // 保留console.error以便调试
     }
   },
 })

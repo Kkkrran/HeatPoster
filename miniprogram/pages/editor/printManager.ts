@@ -728,7 +728,13 @@ export class PrintManager {
             resolve()
           } else {
             // 非0的ResultCode，检查是否有错误信息
-            const errorMsg = res.ErrorMsg?.ErrMsg || res.ErrorMsg?.msg || (typeof res.ErrorMsg === 'string' ? res.ErrorMsg : '') || `错误码: ${res.ResultCode}`
+            let errorMsg = res.ErrorMsg?.ErrMsg || res.ErrorMsg?.msg || (typeof res.ErrorMsg === 'string' ? res.ErrorMsg : '') || `错误码: ${res.ResultCode}`
+            
+            // 特殊处理ResultCode 127：耗材不足或位置不正确
+            if (res.ResultCode === 127) {
+              errorMsg = '耗材不足或位置不正确，请检查'
+            }
+            
             console.error('打印失败', {
               ResultCode: res.ResultCode,
               ErrorMsg: res.ErrorMsg,
@@ -740,7 +746,13 @@ export class PrintManager {
         }).catch((error: any) => {
           clearTimeout(timeoutId)
           console.log('打印图片失败', error)
-          const errorMsg = error?.ErrorMsg?.ErrMsg || error?.message || '未知错误'
+          let errorMsg = error?.ErrorMsg?.ErrMsg || error?.message || '未知错误'
+          
+          // 特殊处理ResultCode 127：耗材不足或位置不正确
+          if (error?.ResultCode === 127 || errorMsg.includes('错误码: 127')) {
+            errorMsg = '耗材不足或位置不正确，请检查'
+          }
+          
           this.page.toast(`打印失败: ${errorMsg}`, 'error')
           reject(error)
         })
