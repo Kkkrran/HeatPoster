@@ -17,14 +17,14 @@
 .button-group {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 40px;
 }
 
 .mode-btn {
   width: 200px;
   height: 60px;
-  font-size: 18px;
-  background-color: #007aff;
+  font-size: 21px;
+  background-color: #1f2329;
   color: white;
   border: none;
   border-radius: 10px;
@@ -32,5 +32,5 @@
 }
 
 .mode-btn:active {
-  background-color: #0056cc;
+  background-color: #000000;
 }

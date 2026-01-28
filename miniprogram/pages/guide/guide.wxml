@@ -1,8 +1,8 @@
 <view class="container">
   <view class="button-group">
-    <button class="mode-btn" bindtap="goToEditor">热敏</button>
-    <button class="mode-btn" bindtap="goToBrush">毛笔</button>
-    <button class="mode-btn" bindtap="goToAlbum">相册</button>
+    <button class="mode-btn" bindtap="goToEditor">百戏手书</button>
+    <button class="mode-btn" bindtap="goToBrush">入戏时刻</button>
+    <button class="mode-btn" bindtap="goToAlbum">百戏图鉴</button>
     <button class="mode-btn" bindtap="goToSettings">设置</button>
   </view>
 </view>

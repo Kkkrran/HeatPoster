@@ -7,5 +7,6 @@
     "t-toast": "tdesign-miniprogram/toast/toast"
   },
   "pageOrientation": "portrait",
-  "disableScroll": true
+  "disableScroll": true,
+  "navigationBarTitleText": "入戏时刻"
 }

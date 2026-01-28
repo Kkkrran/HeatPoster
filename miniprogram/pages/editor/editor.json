@@ -6,5 +6,6 @@
     "t-slider": "tdesign-miniprogram/slider/slider",
     "t-toast": "tdesign-miniprogram/toast/toast",
     "t-input": "tdesign-miniprogram/input/input"
-  }
+  },
+  "navigationBarTitleText": "百戏手书"
 }
