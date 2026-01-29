@@ -1,14 +1,24 @@
 page {
   height: 100vh;
-  background: #f3f5f7;
+  background: transparent;
+}
+
+.page-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
 }
 
 .page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  width: 85%;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
+  background: transparent;
 }
 
 .canvas-wrap {
@@ -18,6 +28,8 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 85%;
+  margin: 0 auto;
 }
 
 .canvas-container {
@@ -48,7 +60,7 @@ page {
   height: 100%;
   border-radius: 24rpx;
   background: #ffffff;
-  border: 1px solid #e7e9ee;
+  /* border: 1px solid #e7e9ee; */
   position: relative;
   z-index: 1;
 }
@@ -62,17 +74,17 @@ page {
   height: 100%;
   border-radius: 24rpx;
   background: #ffffff;
-  border: 1px solid #e7e9ee;
+  /* border: 1px solid #e7e9ee; */
   display: block;
   position: relative;
   z-index: 2; /* Ensure snapshot covers everything when shown */
 }
 
 .top-bar {
-  padding: 24rpx 32rpx;
+  padding: 24rpx 7.5%; /* 侧边对齐画布 */
   display: flex;
   justify-content: space-between;
-  background: #f3f5f7;
+  background: transparent; /* 背景透明，显示底图 */
   z-index: 10;
 }
 
@@ -100,7 +112,7 @@ page {
 }
 
 .rect-btn {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 8rpx;
   padding: 12rpx 32rpx;
   font-size: 28rpx;
@@ -166,7 +178,7 @@ page {
 
 
 .sheet {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
   border-top-left-radius: 32rpx;
   border-top-right-radius: 32rpx;
   padding-bottom: 32rpx;
@@ -221,7 +233,7 @@ page {
   padding: 0 20rpx;
   font-size: 28rpx;
   color: #1f2329;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .panel {
@@ -229,7 +241,7 @@ page {
   padding: 24rpx;
   border-radius: 24rpx;
   border: 1px solid #e7e9ee;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .panel-title {
@@ -265,7 +277,7 @@ page {
 
 .slider-card {
   flex: 1;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
   /* border: 1px solid #e7e9ee; */
   border-radius: 24rpx;
   padding: 24rpx;
@@ -369,7 +381,7 @@ page {
   padding: 16rpx 24rpx;
   border-radius: 12rpx;
   border: 1px solid #e7e9ee;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
   text-align: center;
   font-size: 26rpx;
   color: #1f2329;

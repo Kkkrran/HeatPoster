@@ -1,4 +1,5 @@
 <!-- 绘画编辑页（TDesign Weixin） -->
+<image class="page-bg" src="../../images/card.jpg" mode="aspectFill"></image>
 <view class="page">
   <!-- 顶部操作栏 -->
   <view class="top-bar">

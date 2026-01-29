@@ -240,13 +240,16 @@ Page({
             return
           }
 
-          // 如果有常驻背景比例，根据比例调整canvas容器尺寸（无论是新建还是加载）
+          // 强行设置为 1:1 或使用常驻背景比例（如果有且不为1?暂时优先1:1因为用户要求）
+          // 用户要求 "加入card之后...使得他是1:1"
+          const aspectRatio = 1 // 强制 1:1
+          
           let canvasContainerStyle = ''
           let targetWidth = 0
           let targetHeight = 0
           
-          if (this.data.permanentBackgroundAspectRatio) {
-            const aspectRatio = this.data.permanentBackgroundAspectRatio
+          // if (this.data.permanentBackgroundAspectRatio) {
+            // const aspectRatio = this.data.permanentBackgroundAspectRatio
             const maxWidth = wrapInfo.width // 剩余可用宽度
             const maxHeight = wrapInfo.height // 剩余可用高度
             
@@ -268,7 +271,7 @@ Page({
             const targetWidthRpx = targetWidth / rpxRatio
             const targetHeightRpx = targetHeight / rpxRatio
             canvasContainerStyle = `width: ${targetWidthRpx}rpx; height: ${targetHeightRpx}rpx;`
-          }
+          // }
 
           this.setData({ canvasContainerStyle })
 
