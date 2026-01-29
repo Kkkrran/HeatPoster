@@ -1,4 +1,5 @@
 <view class="page">
+  <image class="page-bg" src="../../images/card.jpg" mode="aspectFill"></image>
   <!-- 顶部操作栏 -->
   <view class="top-bar">
     <view class="top-left">
