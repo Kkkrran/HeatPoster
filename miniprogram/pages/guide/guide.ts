@@ -7,12 +7,12 @@ Page({
     })
   },
   goToEditor() {
-    wx.navigateTo({
+    wx.redirectTo({
       url: '/pages/editor/editor'
     })
   },
   goToBrush() {
-    wx.navigateTo({
+    wx.redirectTo({
       url: '/pages/brush/brush'
     })
   },
